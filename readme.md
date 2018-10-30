@@ -16,6 +16,15 @@ This project has `gatsby-source-filesystem` as a peer dependency, don't forget t
 npm install --save gatsby-source-filesystem
 ```
 
+## Contributing
+
+1. Fork main project on github [here](https://github.com/fikaproductions/fika-gatsby-source-cockpit).
+2. Clone your fork.
+3. Create a new branch on your local fork.
+4. Commit and push your changes on this branch.
+5. Create a pull request on the main project by going [here](https://github.com/fikaproductions/fika-gatsby-source-cockpit/compare), click on "compare across forks" and select your own branch in the "head fork" section.
+6. Compare changes and submit pull request.
+
 ## How to use
 
 Add this to your project `gatsby-config.js` file:
