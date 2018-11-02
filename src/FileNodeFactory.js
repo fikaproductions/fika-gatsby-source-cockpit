@@ -1,16 +1,16 @@
 const {
   createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
-  typePrefix: 'Cockpit',
-})
-const { createRemoteFileNode } = require('gatsby-source-filesystem')
+  generateNodeId
+} = require("gatsby-node-helpers").default({
+  typePrefix: "Cockpit"
+});
+const { createRemoteFileNode } = require("gatsby-source-filesystem");
 
 module.exports = class FileNodeFactory {
   constructor(createNode, store, cache) {
-    this.createNode = createNode
-    this.store = store
-    this.cache = cache
+    this.createNode = createNode;
+    this.store = store;
+    this.cache = cache;
   }
 
   async createImageNode(image) {
@@ -19,8 +19,8 @@ module.exports = class FileNodeFactory {
       store: this.store,
       cache: this.cache,
       createNode: this.createNode,
-      createNodeId: () => generateNodeId('Image', image.id),
-    })
+      createNodeId: () => generateNodeId("Image", image.id)
+    });
   }
 
   async createAssetNode(asset) {
@@ -29,7 +29,7 @@ module.exports = class FileNodeFactory {
       store: this.store,
       cache: this.cache,
       createNode: this.createNode,
-      createNodeId: () => generateNodeId('Asset', asset.id),
-    })
+      createNodeId: () => generateNodeId("Asset", asset.id)
+    });
   }
-}
+};
