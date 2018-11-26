@@ -96,6 +96,8 @@ module.exports = class CockpitService {
 
               if (path.startsWith("/")) {
                 path = `${this.baseUrl}${path}`;
+              } else if (!path.startsWith("http")) {
+                path = `${this.baseUrl}/${path}`;
               }
 
               if (images.filter(image => image.path === path).length === 0) {
