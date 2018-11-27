@@ -2,7 +2,7 @@
 
 This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS data.
 
-Actually, it supports querying raw texts, Markdown, images, assets, linked collections and internationalization.
+Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.
 
 ## Installation
 
@@ -142,11 +142,11 @@ Notes:
 1. The type is `'collectionlink'` and it was originally refering to an entry of the TeamMember collection.
 2. The refered node is attached here. The language is preserved across these bindings.
 
-#### Images
+#### Images and gallery
 
-Image fields nested within a collection will be downloaded and will get a file node attached under the `value` attribute like this:
+Image and gallery fields nested within a collection will be downloaded and will get one or more file(s) node(s) attached under the `value` attribute like this:
 
-(You can then access the child node a plugin like `gatsby-transformer-sharp` would create.)
+(You can then access the child(ren) node(s) with a plugin like `gatsby-transformer-sharp` would create.)
 
 ```
 {
@@ -212,4 +212,4 @@ Notes:
 
 ---
 
-### Powered by Fika Productions™
+## Powered by &nbsp; — &nbsp;&nbsp; <a href="https://fikaproductions.com"><img align="center" width="300" height="50" src="src/images/logo.png"></a>

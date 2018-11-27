@@ -32,26 +32,38 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
     assets
   );
 
-  for (let index = 0; index < images.length; index++) {
-    const imageNode = await fileNodeFactory.createImageNode(images[index]);
-    images[index].localPath = copyFileToStaticFolder(imageNode);
+  for (let path in images) {
+    const imageNode = await fileNodeFactory.createImageNode(path);
+    images[path] = {
+      localPath: copyFileToStaticFolder(imageNode),
+      id: imageNode.id
+    };
   }
 
-  for (let index = 0; index < assets.length; index++) {
-    const assetNode = await fileNodeFactory.createAssetNode(assets[index]);
-    assets[index].localPath = copyFileToStaticFolder(assetNode);
+  for (let path in assets) {
+    const assetNode = await fileNodeFactory.createAssetNode(path);
+    assets[path] = {
+      localPath: copyFileToStaticFolder(assetNode),
+      id: assetNode.id
+    };
   }
 
-  markdowns.forEach(markdown => {
-    updateImagePathsWithLocalPaths(markdown, images);
-    updateAssetPathsWithLocalPaths(markdown, assets);
-    markdownNodeFactory.create(markdown);
-  });
+  for (let markdown in markdowns) {
+    const localMarkdown = updateAssetPathsWithLocalPaths(
+      updateImagePathsWithLocalPaths(markdown, images),
+      assets
+    );
+    const id = markdownNodeFactory.create(localMarkdown);
+    markdowns[markdown] = { id };
+  }
 
   collections.forEach(collection => {
     const nodeFactory = new CollectionItemNodeFactory(
       createNode,
-      collection.name
+      collection.name,
+      images,
+      assets,
+      markdowns
     );
 
     collection.items.forEach(item => {
@@ -73,27 +85,13 @@ const copyFileToStaticFolder = ({ absolutePath, name, ext, internal }) => {
 };
 
 const updateImagePathsWithLocalPaths = (markdown, images) => {
-  markdown.raw = markdown.raw.replace(
-    MARKDOWN_IMAGE_REGEXP_GLOBAL,
-    (...match) =>
-      match[0].replace(
-        match[1],
-        images.filter(image => image.path === match[1])[0].localPath
-      )
+  return markdown.replace(MARKDOWN_IMAGE_REGEXP_GLOBAL, (...match) =>
+    match[0].replace(match[1], images[match[1]].localPath)
   );
 };
 
 const updateAssetPathsWithLocalPaths = (markdown, assets) => {
-  markdown.raw = markdown.raw.replace(
-    MARKDOWN_ASSET_REGEXP_GLOBAL,
-    (...match) => {
-      const matchingAsset = assets.filter(asset => asset.path === match[1])[0];
-
-      if (matchingAsset) {
-        return match[0].replace(match[1], matchingAsset.localPath);
-      }
-
-      return match[0];
-    }
+  return markdown.replace(MARKDOWN_ASSET_REGEXP_GLOBAL, (...match) =>
+    match[0].replace(match[1], assets[match[1]].localPath)
   );
 };
