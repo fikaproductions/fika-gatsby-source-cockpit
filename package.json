@@ -1,6 +1,6 @@
 {
   "name": "@fika/gatsby-source-cockpit",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "This is a Gatsby version 2.x.x source plugin that feeds the GraphQL tree with Cockpit Headless CMS data. Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.",
   "main": "gatsby-node.js",
   "scripts": {

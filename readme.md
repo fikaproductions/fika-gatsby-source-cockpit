@@ -146,7 +146,7 @@ Notes:
 
 Image and gallery fields nested within a collection will be downloaded and will get one or more file(s) node(s) attached under the `value` attribute like this:
 
-(You can then access the child(ren) node(s) with a plugin like `gatsby-transformer-sharp` would create.)
+(You can then access the child(ren) node(s) a plugin like `gatsby-transformer-sharp` would create.)
 
 ```
 {
