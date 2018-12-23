@@ -92,6 +92,8 @@ const updateImagePathsWithLocalPaths = (markdown, images) => {
 
 const updateAssetPathsWithLocalPaths = (markdown, assets) => {
   return markdown.replace(MARKDOWN_ASSET_REGEXP_GLOBAL, (...match) =>
-    match[0].replace(match[1], assets[match[1]].localPath)
+    assets[match[1]]
+      ? match[0].replace(match[1], assets[match[1]].localPath)
+      : match[0]
   );
 };
