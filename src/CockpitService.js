@@ -220,7 +220,8 @@ const createCollectionItem = (
         Array.isArray(collectionEntry[collectionFieldName]) &&
         collectionEntry[collectionFieldName].length === 0
       ) &&
-      collectionEntry[collectionFieldName] != null
+      collectionEntry[collectionFieldName] != null &&
+      collectionEntry[collectionFieldName] !== ''
     ) {
       const itemField = {
         ...collectionFields[collectionFieldName],
