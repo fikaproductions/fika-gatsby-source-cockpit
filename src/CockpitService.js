@@ -95,6 +95,10 @@ module.exports = class CockpitService {
               const imageField = item[fieldName];
               let path = imageField.value.path;
 
+              if (path == null) {
+                return;
+              }
+
               trimAssetField(imageField);
 
               if (path.startsWith("/")) {
@@ -111,6 +115,10 @@ module.exports = class CockpitService {
               galleryField.value.forEach(galleryImageField => {
                 let path = galleryImageField.path;
 
+                if (path == null) {
+                  return;
+                }
+  
                 trimGalleryImageField(galleryImageField);
 
                 if (path.startsWith("/")) {
