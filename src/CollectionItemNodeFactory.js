@@ -42,9 +42,11 @@ const linkImageFieldsToImageNodes = (node, images) => {
       field.value___NODE = images[field.value].id;
       delete field.value;
     } else if (field.type === "gallery") {
-      field.value___NODE = field.value.map(
-        imageField => images[imageField.value].id
-      );
+      if (Array.isArray(field.value)) {
+        field.value___NODE = field.value.map(
+          imageField => images[imageField.value].id
+        );
+      }
       delete field.value;
     }
   });
