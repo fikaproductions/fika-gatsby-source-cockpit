@@ -15,8 +15,13 @@ module.exports = class CollectionItemNodeFactory {
   }
 
   create(collectionItem) {
-    this.createNode(
-      createNodeFactory(this.collectionName, node => {
+    const children = collectionItem.hasOwnProperty('children')
+      ? collectionItem.children.map(childItem => {
+        return this.create(childItem);
+      })
+      : [];
+
+    const nodeFactory = createNodeFactory(this.collectionName, node => {
         node.id = generateNodeId(
           this.collectionName,
           node.lang === "any"
@@ -27,10 +32,14 @@ module.exports = class CollectionItemNodeFactory {
         linkAssetFieldsToAssetNodes(node, this.assets);
         linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
         linkCollectionLinkFieldsToCollectionItemNodes(node);
+      linkChildrenToParent(node, children);
 
         return node;
-      })(collectionItem)
-    );
+    });
+
+    const node = nodeFactory(collectionItem);
+    this.createNode(node);
+    return node;
   }
 };
 
@@ -110,4 +119,11 @@ const linkCollectionLinkFieldsToCollectionItemNodes = node => {
       delete field.value;
     }
   });
+};
+
+const linkChildrenToParent = (node, children) => {
+  if (Array.isArray(children) && children.length > 0) {
+    node.children___NODE = children.map(child => child.id);
+    delete node.children;
+  }
 };

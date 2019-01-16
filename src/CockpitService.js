@@ -79,11 +79,18 @@ module.exports = class CockpitService {
     return Promise.all(names.map(name => this.getCollection(name)));
   }
 
-  normalizeCollectionsImages(collections) {
-    const images = {};
+  normalizeCollectionsImages(collections, existingImages = {}) {
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
+        this.normalizeCollectionItemImages(item, existingImages);
+      });
+    });
+
+    return existingImages;
+  }
+
+  normalizeCollectionItemImages(item, existingImages) {
         Object.keys(item)
           .filter(
             fieldName =>
@@ -108,7 +115,7 @@ module.exports = class CockpitService {
               }
 
               imageField.value = path;
-              images[path] = null;
+          	  existingImages[path] = null;
             } else {
               const galleryField = item[fieldName];
 
@@ -128,21 +135,32 @@ module.exports = class CockpitService {
                 }
 
                 galleryImageField.value = path;
-                images[path] = null;
+       		    existingImages[path] = null;
               });
             }
           });
-      });
-    });
 
-    return images;
+    // Check the child items of the collection for any images
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemImages(child, existingImages);
+      })
+  }
   }
 
-  normalizeCollectionsAssets(collections) {
-    const assets = {};
+
+  normalizeCollectionsAssets(collections, existingAssets = {}) {
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
+        this.normalizeCollectionItemAssets(item, existingAssets);
+      });
+    });
+
+    return existingAssets;
+  }
+
+  normalizeCollectionItemAssets(item, existingAssets) {
         Object.keys(item)
           .filter(fieldName => item[fieldName].type === "asset")
           .forEach(fieldName => {
@@ -154,32 +172,42 @@ module.exports = class CockpitService {
             path = `${this.baseUrl}/storage/uploads${path}`;
 
             assetField.value = path;
-            assets[path] = null;
+        existingAssets[path] = null;
           });
+
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemAssets(child, existingAssets);
+      })
+    }
+  }
+
+  normalizeCollectionsMarkdowns(collections, existingImages, existingAssets, existingMarkdowns = {}) {
+    collections.forEach(collection => {
+      collection.items.forEach(item => {
+        this.normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns);
       });
     });
 
-    return assets;
+    return existingMarkdowns;
   }
 
-  normalizeCollectionsMarkdowns(collections, existingImages, existingAssets) {
-    const markdowns = {};
-
-    collections.forEach(collection => {
-      collection.items.forEach(item => {
+  normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns) {
         Object.keys(item)
           .filter(fieldName => item[fieldName].type === "markdown")
           .forEach(fieldName => {
             const markdownField = item[fieldName];
 
-            markdowns[markdownField.value] = null;
+        existingMarkdowns[markdownField.value] = null;
             extractImagesFromMarkdown(markdownField.value, existingImages);
             extractAssetsFromMarkdown(markdownField.value, existingAssets);
           });
-      });
-    });
 
-    return markdowns;
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemMarkdowns(child, existingImages, existingAssets, existingMarkdowns);
+      })
+    }
   }
 };
 
@@ -241,6 +269,12 @@ const createCollectionItem = (
       item[collectionFieldName] = itemField;
     }
   });
+
+  if (collectionEntry.hasOwnProperty('children')) {
+    item.children = collectionEntry.children.map((childEntry) => {
+      return createCollectionItem(collectionFields, childEntry, locale);
+    });
+  }
 
   return item;
 };
