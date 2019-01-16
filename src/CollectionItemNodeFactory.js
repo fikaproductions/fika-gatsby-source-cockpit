@@ -15,22 +15,33 @@ module.exports = class CollectionItemNodeFactory {
   }
 
   create(collectionItem) {
-    this.createNode(
-      createNodeFactory(this.collectionName, node => {
-        node.id = generateNodeId(
-          this.collectionName,
-          node.lang === "any"
-            ? node.cockpitId
-            : `${node.cockpitId}_${node.lang}`
-        );
-        linkImageFieldsToImageNodes(node, this.images);
-        linkAssetFieldsToAssetNodes(node, this.assets);
-        linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
-        linkCollectionLinkFieldsToCollectionItemNodes(node);
+    const children = collectionItem.hasOwnProperty('children')
+      ? collectionItem.children.map(childItem => {
+        return this.create(childItem);
+      })
+      : [];
+    delete collectionItem.children;
 
-        return node;
-      })(collectionItem)
-    );
+    const nodeFactory = createNodeFactory(this.collectionName, node => {
+      node.id = generateNodeId(
+        this.collectionName,
+        node.lang === "any"
+          ? node.cockpitId
+          : `${node.cockpitId}_${node.lang}`
+      );
+      linkImageFieldsToImageNodes(node, this.images);
+      linkAssetFieldsToAssetNodes(node, this.assets);
+      linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
+      linkCollectionLinkFieldsToCollectionItemNodes(node);
+      linkChildrenToParent(node, children);
+
+      return node;
+    });
+
+    const node = nodeFactory(collectionItem);
+    this.createNode(node);
+
+    return node;
   }
 };
 
@@ -110,4 +121,15 @@ const linkCollectionLinkFieldsToCollectionItemNodes = node => {
       delete field.value;
     }
   });
+};
+
+const linkChildrenToParent = (node, children) => {
+
+  if (Array.isArray(children) && children.length > 0) {
+    node.children___NODE = children.map(child => child.id);
+    children.forEach(child => {
+      child.parent___NODE = node.id;
+    });
+    delete node.children;
+  }
 };
