@@ -135,7 +135,7 @@ module.exports = class CockpitService {
                 }
 
                 galleryImageField.value = path;
-       		    existingImages[path] = null;
+                existingImages[path] = null;
               });
             }
           });
