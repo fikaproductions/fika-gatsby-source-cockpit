@@ -5,11 +5,13 @@ const CockpitService = require("./src/CockpitService");
 const CollectionItemNodeFactory = require("./src/CollectionItemNodeFactory");
 const {
   MARKDOWN_IMAGE_REGEXP_GLOBAL,
-  MARKDOWN_ASSET_REGEXP_GLOBAL
+  MARKDOWN_ASSET_REGEXP_GLOBAL,
+  TYPE_PREFIX_COCKPIT
 } = require("./src/constants");
 const FileNodeFactory = require("./src/FileNodeFactory");
 const MarkdownNodeFactory = require("./src/MarkdownNodeFactory");
 
+exports.setFieldsOnGraphQLNodeType= require('./extend-node-type');
 exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   const { createNode } = actions;
   const cockpit = new CockpitService(
@@ -31,6 +33,8 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
     images,
     assets
   );
+
+  cache.set(TYPE_PREFIX_COCKPIT, collections);
 
   for (let path in images) {
     const imageNode = await fileNodeFactory.createImageNode(path);
