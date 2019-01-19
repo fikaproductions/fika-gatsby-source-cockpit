@@ -22,19 +22,19 @@ module.exports = class CollectionItemNodeFactory {
       : [];
 
     const nodeFactory = createNodeFactory(this.collectionName, node => {
-        node.id = generateNodeId(
-          this.collectionName,
-          node.lang === "any"
-            ? node.cockpitId
-            : `${node.cockpitId}_${node.lang}`
-        );
-        linkImageFieldsToImageNodes(node, this.images);
-        linkAssetFieldsToAssetNodes(node, this.assets);
-        linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
-        linkCollectionLinkFieldsToCollectionItemNodes(node);
+      node.id = generateNodeId(
+        this.collectionName,
+        node.lang === "any"
+          ? node.cockpitId
+          : `${node.cockpitId}_${node.lang}`
+      );
+      linkImageFieldsToImageNodes(node, this.images);
+      linkAssetFieldsToAssetNodes(node, this.assets);
+      linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
+      linkCollectionLinkFieldsToCollectionItemNodes(node);
       linkChildrenToParent(node, children);
 
-        return node;
+      return node;
     });
 
     const node = nodeFactory(collectionItem);
@@ -124,6 +124,9 @@ const linkCollectionLinkFieldsToCollectionItemNodes = node => {
 const linkChildrenToParent = (node, children) => {
   if (Array.isArray(children) && children.length > 0) {
     node.children___NODE = children.map(child => child.id);
+    children.forEach(child => {
+      child.parent___NODE = node.id;
+    });
     delete node.children;
   }
 };

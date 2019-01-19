@@ -125,7 +125,7 @@ module.exports = class CockpitService {
                 if (path == null) {
                   return;
                 }
-  
+
                 trimGalleryImageField(galleryImageField);
 
                 if (path.startsWith("/")) {
@@ -243,11 +243,13 @@ const trimGalleryImageField = galleryImageField => {
 const createCollectionItem = (
   collectionFields,
   collectionEntry,
-  locale = null
+  locale = null,
+  level = 1
 ) => {
   const item = {
     cockpitId: collectionEntry._id,
-    lang: locale == null ? "any" : locale
+    lang: locale == null ? "any" : locale,
+    level: level,
   };
 
   Object.keys(collectionFields).forEach(collectionFieldName => {
@@ -272,7 +274,7 @@ const createCollectionItem = (
 
   if (collectionEntry.hasOwnProperty('children')) {
     item.children = collectionEntry.children.map((childEntry) => {
-      return createCollectionItem(collectionFields, childEntry, locale);
+      return createCollectionItem(collectionFields, childEntry, locale, level + 1);
     });
   }
 
