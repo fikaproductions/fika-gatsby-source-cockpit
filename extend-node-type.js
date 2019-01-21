@@ -13,7 +13,7 @@ async function getCockpitData(cache, typeName) {
     const cachedData = await cache.get(TYPE_PREFIX_COCKPIT);
     const cockpitTypeName = typeName.replace(TYPE_PREFIX_COCKPIT, '');
     const cachedDataForType = cachedData.filter((entry) => (
-      entry.name === cockpitTypeName
+      entry.name.toLocaleLowerCase() === cockpitTypeName.toLocaleLowerCase()
     ));
     return cachedDataForType.length > 0
       ? cachedDataForType[0]
