@@ -1,8 +1,12 @@
 const {
+  TYPE_PREFIX_COCKPIT,
+} = require("./constants");
+
+const {
   createNodeFactory,
   generateNodeId
 } = require("gatsby-node-helpers").default({
-  typePrefix: "Cockpit"
+  typePrefix: TYPE_PREFIX_COCKPIT
 });
 const hash = require("string-hash");
 

@@ -1,5 +1,9 @@
+const {
+  TYPE_PREFIX_COCKPIT,
+} = require("./constants");
+
 const { generateNodeId } = require("gatsby-node-helpers").default({
-  typePrefix: "Cockpit"
+  typePrefix: TYPE_PREFIX_COCKPIT
 });
 const { createRemoteFileNode } = require("gatsby-source-filesystem");
 const hash = require("string-hash");
