@@ -100,7 +100,8 @@ module.exports = async (
   cachedData.items.forEach((item) => {
 
     const jsonFields = Object.keys(item).filter(
-      fieldname => item[fieldname].type === 'layout'
+      fieldname => item[fieldname].type === 'layout' ||
+        item[fieldname].type === 'layout-grid'
     );
 
     jsonFields.forEach(fieldname => {
