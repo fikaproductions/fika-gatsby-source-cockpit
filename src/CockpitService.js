@@ -91,61 +91,61 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionItemImages(item, existingImages) {
-        Object.keys(item)
-          .filter(
-            fieldName =>
-              item[fieldName].type === "image" ||
-              item[fieldName].type === "gallery"
-          )
-          .forEach(fieldName => {
-            if (!Array.isArray(item[fieldName].value)) {
-              const imageField = item[fieldName];
-              let path = imageField.value.path;
+    Object.keys(item)
+      .filter(
+        fieldName =>
+          item[fieldName].type === "image" ||
+          item[fieldName].type === "gallery"
+      )
+      .forEach(fieldName => {
+        if (!Array.isArray(item[fieldName].value)) {
+          const imageField = item[fieldName];
+          let path = imageField.value.path;
 
-              if (path == null) {
-                return;
-              }
+          if (path == null) {
+            return;
+          }
 
-              trimAssetField(imageField);
+          trimAssetField(imageField);
 
-              if (path.startsWith("/")) {
-                path = `${this.baseUrl}${path}`;
-              } else if (!path.startsWith("http")) {
-                path = `${this.baseUrl}/${path}`;
-              }
+          if (path.startsWith("/")) {
+            path = `${this.baseUrl}${path}`;
+          } else if (!path.startsWith("http")) {
+            path = `${this.baseUrl}/${path}`;
+          }
 
-              imageField.value = path;
-          	  existingImages[path] = null;
-            } else {
-              const galleryField = item[fieldName];
+          imageField.value = path;
+          existingImages[path] = null;
+        } else {
+          const galleryField = item[fieldName];
 
-              galleryField.value.forEach(galleryImageField => {
-                let path = galleryImageField.path;
+          galleryField.value.forEach(galleryImageField => {
+            let path = galleryImageField.path;
 
-                if (path == null) {
-                  return;
-                }
-
-                trimGalleryImageField(galleryImageField);
-
-                if (path.startsWith("/")) {
-                  path = `${this.baseUrl}${path}`;
-                } else {
-                  path = `${this.baseUrl}/${path}`;
-                }
-
-                galleryImageField.value = path;
-                existingImages[path] = null;
-              });
+            if (path == null) {
+              return;
             }
+
+            trimGalleryImageField(galleryImageField);
+
+            if (path.startsWith("/")) {
+              path = `${this.baseUrl}${path}`;
+            } else {
+              path = `${this.baseUrl}/${path}`;
+            }
+
+            galleryImageField.value = path;
+            existingImages[path] = null;
           });
+        }
+      });
 
     // Check the child items of the collection for any images
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
         this.normalizeCollectionItemImages(child, existingImages);
       })
-  }
+    }
   }
 
 
@@ -161,19 +161,19 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionItemAssets(item, existingAssets) {
-        Object.keys(item)
-          .filter(fieldName => item[fieldName].type === "asset")
-          .forEach(fieldName => {
-            const assetField = item[fieldName];
-            let path = assetField.value.path;
+    Object.keys(item)
+      .filter(fieldName => item[fieldName].type === "asset")
+      .forEach(fieldName => {
+        const assetField = item[fieldName];
+        let path = assetField.value.path;
 
-            trimAssetField(assetField);
+        trimAssetField(assetField);
 
-            path = `${this.baseUrl}/storage/uploads${path}`;
+        path = `${this.baseUrl}/storage/uploads${path}`;
 
-            assetField.value = path;
+        assetField.value = path;
         existingAssets[path] = null;
-          });
+      });
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
@@ -193,15 +193,14 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns) {
-        Object.keys(item)
-          .filter(fieldName => item[fieldName].type === "markdown")
-          .forEach(fieldName => {
-            const markdownField = item[fieldName];
-
+    Object.keys(item)
+      .filter(fieldName => item[fieldName].type === "markdown")
+      .forEach(fieldName => {
+        const markdownField = item[fieldName];
         existingMarkdowns[markdownField.value] = null;
-            extractImagesFromMarkdown(markdownField.value, existingImages);
-            extractAssetsFromMarkdown(markdownField.value, existingAssets);
-          });
+        extractImagesFromMarkdown(markdownField.value, existingImages);
+        extractAssetsFromMarkdown(markdownField.value, existingAssets);
+      });
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {

@@ -20,6 +20,7 @@ module.exports = class CollectionItemNodeFactory {
         return this.create(childItem);
       })
       : [];
+    delete collectionItem.children;
 
     const nodeFactory = createNodeFactory(this.collectionName, node => {
       node.id = generateNodeId(
@@ -39,6 +40,7 @@ module.exports = class CollectionItemNodeFactory {
 
     const node = nodeFactory(collectionItem);
     this.createNode(node);
+
     return node;
   }
 };
@@ -122,6 +124,7 @@ const linkCollectionLinkFieldsToCollectionItemNodes = node => {
 };
 
 const linkChildrenToParent = (node, children) => {
+
   if (Array.isArray(children) && children.length > 0) {
     node.children___NODE = children.map(child => child.id);
     children.forEach(child => {
