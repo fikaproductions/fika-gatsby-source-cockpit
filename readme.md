@@ -1,6 +1,6 @@
 # @fika/gatsby-source-cockpit
 
-This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS data.
+This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections data.
 
 Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.
 
@@ -72,6 +72,7 @@ Collections are converted into nodes. You can access many collection entries at 
         TeamMember1
         TeamMember2
         TeamMember3
+        children // (4)
       }
     }
   }
@@ -83,6 +84,7 @@ Notes:
 1. You can filter amongst them.
 2. Each node is a collection entry in an array.
 3. You can get the original Cockpit element's id (aka the `_id`) that way.
+4. You can access descendant collection entries within that field if you have hierarchically structured your collection entries in Cockpit (_Custom sortable entries_ turned on).
 
 Or you can access one entry at the time that way:
 
