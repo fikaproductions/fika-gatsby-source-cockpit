@@ -1,243 +1,259 @@
-const mime = require("mime");
-const request = require("request-promise");
+const mime = require('mime')
+const request = require('request-promise')
 
 const {
   METHODS,
   MARKDOWN_IMAGE_REGEXP,
-  MARKDOWN_ASSET_REGEXP
-} = require("./constants");
+  MARKDOWN_ASSET_REGEXP,
+} = require('./constants')
 
 module.exports = class CockpitService {
   constructor(baseUrl, token, locales) {
-    this.baseUrl = baseUrl;
-    this.token = token;
-    this.locales = locales;
+    this.baseUrl = baseUrl
+    this.token = token
+    this.locales = locales
   }
 
   async fetch(endpoint, method, lang = null) {
     return request({
       uri: `${this.baseUrl}/api${endpoint}?token=${this.token}${
-        lang ? `&lang=${lang}` : ""
+        lang ? `&lang=${lang}` : ''
       }`,
       method,
-      json: true
-    });
+      json: true,
+    })
   }
 
   async validateBaseUrl() {
     try {
-      await this.fetch("", METHODS.GET);
+      await this.fetch('', METHODS.GET)
     } catch (error) {
       throw new Error(
-        "BaseUrl config parameter is invalid or there is no internet connection"
-      );
+        'BaseUrl config parameter is invalid or there is no internet connection'
+      )
     }
   }
 
   async validateToken() {
     try {
-      await this.fetch("/collections/listCollections", METHODS.GET);
+      await this.fetch('/collections/listCollections', METHODS.GET)
     } catch (error) {
-      throw new Error("Token config parameter is invalid");
+      throw new Error('Token config parameter is invalid')
     }
   }
 
   async getCollectionNames() {
-    return this.fetch("/collections/listCollections", METHODS.GET);
+    return this.fetch('/collections/listCollections', METHODS.GET)
   }
 
   async getCollection(name) {
     const { fields: collectionFields, entries } = await this.fetch(
       `/collections/get/${name}`,
       METHODS.GET
-    );
+    )
 
     const items = entries.map(entry =>
       createCollectionItem(collectionFields, entry)
-    );
+    )
 
     for (let index = 0; index < this.locales.length; index++) {
       const { fields: collectionFields, entries } = await this.fetch(
         `/collections/get/${name}`,
         METHODS.GET,
         this.locales[index]
-      );
+      )
 
       items.push(
         ...entries.map(entry =>
           createCollectionItem(collectionFields, entry, this.locales[index])
         )
-      );
+      )
     }
 
-    return { items, name };
+    return { items, name }
   }
 
   async getCollections() {
-    const names = await this.getCollectionNames();
+    const names = await this.getCollectionNames()
 
-    return Promise.all(names.map(name => this.getCollection(name)));
+    return Promise.all(names.map(name => this.getCollection(name)))
   }
 
   normalizeCollectionsImages(collections, existingImages = {}) {
-
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        this.normalizeCollectionItemImages(item, existingImages);
-      });
-    });
+        this.normalizeCollectionItemImages(item, existingImages)
+      })
+    })
 
-    return existingImages;
+    return existingImages
   }
 
   normalizeCollectionItemImages(item, existingImages) {
     Object.keys(item)
       .filter(
         fieldName =>
-          item[fieldName].type === "image" ||
-          item[fieldName].type === "gallery"
+          item[fieldName].type === 'image' || item[fieldName].type === 'gallery'
       )
       .forEach(fieldName => {
         if (!Array.isArray(item[fieldName].value)) {
-          const imageField = item[fieldName];
-          let path = imageField.value.path;
+          const imageField = item[fieldName]
+          let path = imageField.value.path
 
           if (path == null) {
-            return;
+            return
           }
 
-          trimAssetField(imageField);
+          trimAssetField(imageField)
 
-          if (path.startsWith("/")) {
-            path = `${this.baseUrl}${path}`;
-          } else if (!path.startsWith("http")) {
-            path = `${this.baseUrl}/${path}`;
+          if (path.startsWith('/')) {
+            path = `${this.baseUrl}${path}`
+          } else if (!path.startsWith('http')) {
+            path = `${this.baseUrl}/${path}`
           }
 
-          imageField.value = path;
-          existingImages[path] = null;
+          imageField.value = path
+          existingImages[path] = null
         } else {
-          const galleryField = item[fieldName];
+          const galleryField = item[fieldName]
 
           galleryField.value.forEach(galleryImageField => {
-            let path = galleryImageField.path;
+            let path = galleryImageField.path
 
             if (path == null) {
-              return;
+              return
             }
 
-            trimGalleryImageField(galleryImageField);
+            trimGalleryImageField(galleryImageField)
 
-            if (path.startsWith("/")) {
-              path = `${this.baseUrl}${path}`;
+            if (path.startsWith('/')) {
+              path = `${this.baseUrl}${path}`
             } else {
-              path = `${this.baseUrl}/${path}`;
+              path = `${this.baseUrl}/${path}`
             }
 
-            galleryImageField.value = path;
-            existingImages[path] = null;
-          });
+            galleryImageField.value = path
+            existingImages[path] = null
+          })
         }
-      });
+      })
 
     // Check the child items of the collection for any images
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemImages(child, existingImages);
+        this.normalizeCollectionItemImages(child, existingImages)
       })
     }
   }
 
-
   normalizeCollectionsAssets(collections, existingAssets = {}) {
-
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        this.normalizeCollectionItemAssets(item, existingAssets);
-      });
-    });
+        this.normalizeCollectionItemAssets(item, existingAssets)
+      })
+    })
 
-    return existingAssets;
+    return existingAssets
   }
 
   normalizeCollectionItemAssets(item, existingAssets) {
     Object.keys(item)
-      .filter(fieldName => item[fieldName].type === "asset")
+      .filter(fieldName => item[fieldName].type === 'asset')
       .forEach(fieldName => {
-        const assetField = item[fieldName];
-        let path = assetField.value.path;
+        const assetField = item[fieldName]
+        let path = assetField.value.path
 
-        trimAssetField(assetField);
+        trimAssetField(assetField)
 
-        path = `${this.baseUrl}/storage/uploads${path}`;
+        path = `${this.baseUrl}/storage/uploads${path}`
 
-        assetField.value = path;
-        existingAssets[path] = null;
-      });
+        assetField.value = path
+        existingAssets[path] = null
+      })
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemAssets(child, existingAssets);
+        this.normalizeCollectionItemAssets(child, existingAssets)
       })
     }
   }
 
-  normalizeCollectionsMarkdowns(collections, existingImages, existingAssets, existingMarkdowns = {}) {
+  normalizeCollectionsMarkdowns(
+    collections,
+    existingImages,
+    existingAssets,
+    existingMarkdowns = {}
+  ) {
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        this.normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns);
-      });
-    });
+        this.normalizeCollectionItemMarkdowns(
+          item,
+          existingImages,
+          existingAssets,
+          existingMarkdowns
+        )
+      })
+    })
 
-    return existingMarkdowns;
+    return existingMarkdowns
   }
 
-  normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns) {
+  normalizeCollectionItemMarkdowns(
+    item,
+    existingImages,
+    existingAssets,
+    existingMarkdowns
+  ) {
     Object.keys(item)
-      .filter(fieldName => item[fieldName].type === "markdown")
+      .filter(fieldName => item[fieldName].type === 'markdown')
       .forEach(fieldName => {
-        const markdownField = item[fieldName];
-        existingMarkdowns[markdownField.value] = null;
-        extractImagesFromMarkdown(markdownField.value, existingImages);
-        extractAssetsFromMarkdown(markdownField.value, existingAssets);
-      });
+        const markdownField = item[fieldName]
+        existingMarkdowns[markdownField.value] = null
+        extractImagesFromMarkdown(markdownField.value, existingImages)
+        extractAssetsFromMarkdown(markdownField.value, existingAssets)
+      })
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemMarkdowns(child, existingImages, existingAssets, existingMarkdowns);
+        this.normalizeCollectionItemMarkdowns(
+          child,
+          existingImages,
+          existingAssets,
+          existingMarkdowns
+        )
       })
     }
   }
-};
+}
 
 const trimAssetField = assetField => {
-  delete assetField.value._id;
-  delete assetField.value.path;
-  delete assetField.value.title;
-  delete assetField.value.mime;
-  delete assetField.value.size;
-  delete assetField.value.image;
-  delete assetField.value.video;
-  delete assetField.value.audio;
-  delete assetField.value.archive;
-  delete assetField.value.document;
-  delete assetField.value.code;
-  delete assetField.value.created;
-  delete assetField.value.modified;
-  delete assetField.value._by;
+  delete assetField.value._id
+  delete assetField.value.path
+  delete assetField.value.title
+  delete assetField.value.mime
+  delete assetField.value.size
+  delete assetField.value.image
+  delete assetField.value.video
+  delete assetField.value.audio
+  delete assetField.value.archive
+  delete assetField.value.document
+  delete assetField.value.code
+  delete assetField.value.created
+  delete assetField.value.modified
+  delete assetField.value._by
 
   Object.keys(assetField.value).forEach(attribute => {
-    assetField[attribute] = assetField.value[attribute];
-    delete assetField.value[attribute];
-  });
-};
+    assetField[attribute] = assetField.value[attribute]
+    delete assetField.value[attribute]
+  })
+}
 
 const trimGalleryImageField = galleryImageField => {
-  galleryImageField.type = "image";
+  galleryImageField.type = 'image'
 
-  delete galleryImageField.meta.asset;
-  delete galleryImageField.path;
-};
+  delete galleryImageField.meta.asset
+  delete galleryImageField.path
+}
 
 const createCollectionItem = (
   collectionFields,
@@ -247,9 +263,9 @@ const createCollectionItem = (
 ) => {
   const item = {
     cockpitId: collectionEntry._id,
-    lang: locale == null ? "any" : locale,
+    lang: locale == null ? 'any' : locale,
     level: level,
-  };
+  }
 
   Object.keys(collectionFields).forEach(collectionFieldName => {
     if (
@@ -262,48 +278,49 @@ const createCollectionItem = (
     ) {
       const itemField = {
         ...collectionFields[collectionFieldName],
-        value: collectionEntry[collectionFieldName]
-      };
-      delete itemField.name;
-      delete itemField.localize;
-      delete itemField.options;
-      item[collectionFieldName] = itemField;
+        value: collectionEntry[collectionFieldName],
+      }
+      delete itemField.name
+      delete itemField.localize
+      delete itemField.options
+      item[collectionFieldName] = itemField
     }
-  });
+  })
 
   if (collectionEntry.hasOwnProperty('children')) {
-    item.children = collectionEntry.children.map((childEntry) => {
-      return createCollectionItem(collectionFields, childEntry, locale, level + 1);
-    });
+    item.children = collectionEntry.children.map(childEntry => {
+      return createCollectionItem(
+        collectionFields,
+        childEntry,
+        locale,
+        level + 1
+      )
+    })
   }
 
-  return item;
-};
+  return item
+}
 
 const extractImagesFromMarkdown = (markdown, existingImages) => {
-  let unparsedMarkdown = markdown;
-  let match;
+  let unparsedMarkdown = markdown
+  let match
 
   while ((match = MARKDOWN_IMAGE_REGEXP.exec(unparsedMarkdown))) {
-    unparsedMarkdown = unparsedMarkdown.substring(
-      match.index + match[0].length
-    );
-    existingImages[match[1]] = null;
+    unparsedMarkdown = unparsedMarkdown.substring(match.index + match[0].length)
+    existingImages[match[1]] = null
   }
-};
+}
 
 const extractAssetsFromMarkdown = (markdown, existingAssets) => {
-  let unparsedMarkdown = markdown;
-  let match;
+  let unparsedMarkdown = markdown
+  let match
 
   while ((match = MARKDOWN_ASSET_REGEXP.exec(unparsedMarkdown))) {
-    unparsedMarkdown = unparsedMarkdown.substring(
-      match.index + match[0].length
-    );
-    const mediaType = mime.getType(match[1]);
+    unparsedMarkdown = unparsedMarkdown.substring(match.index + match[0].length)
+    const mediaType = mime.getType(match[1])
 
-    if (mediaType && mediaType !== "text/html") {
-      existingAssets[match[1]] = null;
+    if (mediaType && mediaType !== 'text/html') {
+      existingAssets[match[1]] = null
     }
   }
-};
+}
