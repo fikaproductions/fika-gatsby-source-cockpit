@@ -27,13 +27,7 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   await cockpit.validateToken()
 
   const collections = await cockpit.getCollections()
-  const images = await cockpit.normalizeCollectionsImages(collections)
-  const assets = await cockpit.normalizeCollectionsAssets(collections)
-  const markdowns = await cockpit.normalizeCollectionsMarkdowns(
-    collections,
-    images,
-    assets
-  )
+  const { images, assets, markdowns } = cockpit.normalizeResources(collections)
 
   cache.set(TYPE_PREFIX_COCKPIT, collections);
 
