@@ -4,6 +4,7 @@ const {
 } = require('gatsby-node-helpers').default({
   typePrefix: 'Cockpit',
 })
+const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 
 module.exports = class CollectionItemNodeFactory {
   constructor(createNode, collectionName, images, assets, markdowns) {
@@ -44,80 +45,66 @@ module.exports = class CollectionItemNodeFactory {
 }
 
 const linkImageFieldsToImageNodes = (node, images) => {
-  Object.keys(node).forEach(fieldName => {
-    const field = node[fieldName]
+  getFieldsOfTypes(node, ['image']).forEach(field => {
+    field.value___NODE = images[field.value].id
+    delete field.value
+  })
 
-    if (field.type === 'image') {
-      field.value___NODE = images[field.value].id
-      delete field.value
-    } else if (field.type === 'gallery') {
-      if (Array.isArray(field.value)) {
-        field.value___NODE = field.value.map(
-          imageField => images[imageField.value].id
-        )
-      }
-      delete field.value
+  getFieldsOfTypes(node, ['gallery']).forEach(field => {
+    if (Array.isArray(field.value)) {
+      field.value___NODE = field.value.map(
+        imageField => images[imageField.value].id
+      )
     }
+    delete field.value
   })
 }
 
 const linkAssetFieldsToAssetNodes = (node, assets) => {
-  Object.keys(node).forEach(fieldName => {
-    const field = node[fieldName]
-
-    if (field.type === 'asset') {
-      field.value___NODE = assets[field.value].id
-      delete field.value
-    }
+  getFieldsOfTypes(node, ['asset']).forEach(field => {
+    field.value___NODE = assets[field.value].id
+    delete field.value
   })
 }
 
 const linkMarkdownFieldsToMarkdownNodes = (node, markdowns) => {
-  Object.keys(node).forEach(fieldName => {
-    const field = node[fieldName]
-
-    if (field.type === 'markdown') {
-      field.value___NODE = markdowns[field.value].id
-      delete field.value
-    }
+  getFieldsOfTypes(node, ['markdown']).forEach(field => {
+    field.value___NODE = markdowns[field.value].id
+    delete field.value
   })
 }
 
 const linkCollectionLinkFieldsToCollectionItemNodes = node => {
-  Object.keys(node).forEach(fieldName => {
-    const field = node[fieldName]
+  getFieldsOfTypes(node, ['collectionlink']).forEach(field => {
+    if (Array.isArray(field.value)) {
+      const collectionName = field.value[0].link
 
-    if (field.type === 'collectionlink') {
-      if (Array.isArray(field.value)) {
-        const collectionName = field.value[0].link
-
-        field.value.forEach(linkedCollection => {
-          if (linkedCollection.link !== collectionName) {
-            throw new Error(
-              `One to many Collection-Links must refer to entries from a single collection (concerned field: ${fieldName})`
-            )
-          }
-        })
-
-        field.value___NODE = field.value.map(linkedCollection =>
-          generateNodeId(
-            linkedCollection.link,
-            node.lang === 'any'
-              ? linkedCollection._id
-              : `${linkedCollection._id}_${node.lang}`
+      field.value.forEach(linkedCollection => {
+        if (linkedCollection.link !== collectionName) {
+          throw new Error(
+            `One to many Collection-Links must refer to entries from a single collection (concerned field: ${fieldName})`
           )
-        )
-      } else {
-        field.value___NODE = generateNodeId(
-          field.value.link,
-          node.lang === 'any'
-            ? field.value._id
-            : `${field.value._id}_${node.lang}`
-        )
-      }
+        }
+      })
 
-      delete field.value
+      field.value___NODE = field.value.map(linkedCollection =>
+        generateNodeId(
+          linkedCollection.link,
+          node.lang === 'any'
+            ? linkedCollection._id
+            : `${linkedCollection._id}_${node.lang}`
+        )
+      )
+    } else {
+      field.value___NODE = generateNodeId(
+        field.value.link,
+        node.lang === 'any'
+          ? field.value._id
+          : `${field.value._id}_${node.lang}`
+      )
     }
+
+    delete field.value
   })
 }
 
