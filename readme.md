@@ -45,6 +45,7 @@ plugins: [
       baseUrl:
         'YOUR_COCKPIT_API_BASE_URL', // (1)
       locales: ['EVERY_LANGUAGE_KEYS_DEFINED_IN_YOUR_COCKPIT_CONFIGURATION'], // (2)
+      collections: [] // (3)
     },
   },
 ]
@@ -54,6 +55,7 @@ Notes:
 
 1. E.g. `'http://localhost:8080'`.
 2. E.g. `['en', 'fr']`.
+3. The specific Cockpit collections you want to fetch. If empty or null all collections will be fetched. E.g. `['Products', 'Menu']`
 
 Adding the `gatsby-source-filesystem` dependency to your project grants access to the `publicURL` field resolver attribute on the file nodes that this plugin generates by extending the GraphQL type of the file nodes. So, as you can guess, the path specified in the plugin options could be anything, we do not need it to load any local files, we are just taking advantage of its extension of the file node type.
 
