@@ -15,7 +15,8 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   const cockpit = new CockpitService(
     configOptions.baseUrl,
     configOptions.token,
-    configOptions.locales
+    configOptions.locales,
+    configOptions.collections
   )
   const fileNodeFactory = new FileNodeFactory(createNode, store, cache)
   const markdownNodeFactory = new MarkdownNodeFactory(createNode)
