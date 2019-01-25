@@ -3,6 +3,7 @@ const path = require("path");
 
 const CockpitService = require("./src/CockpitService");
 const CollectionItemNodeFactory = require("./src/CollectionItemNodeFactory");
+const NewCollectionItemNodeFactory = require("./src/NewCollectionItemNodeFactory");
 const {
   MARKDOWN_IMAGE_REGEXP_GLOBAL,
   MARKDOWN_ASSET_REGEXP_GLOBAL
@@ -58,7 +59,7 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   }
 
   collections.forEach(collection => {
-    const nodeFactory = new CollectionItemNodeFactory(
+    const nodeFactory = new NewCollectionItemNodeFactory(
       createNode,
       collection.name,
       images,
