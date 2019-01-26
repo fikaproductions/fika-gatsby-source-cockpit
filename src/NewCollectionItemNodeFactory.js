@@ -51,7 +51,10 @@ module.exports = class NewCollectionItemNodeFactory {
     })
 
     const node = CollectionItem({
-      ...generateNodeData(collectionItem, this.resources),
+      ...generateNodeData(collectionItem, {
+        ...this.resources,
+        item: collectionItem,
+      }),
       children,
     })
     this.createNode(node)
@@ -72,10 +75,7 @@ const generateNodeData = (item, resources) => {
         ...item[name],
         name,
       }
-      const [newName, newValue] = processField(fieldData, {
-        ...resources,
-        item,
-      })
+      const [newName, newValue] = processField(fieldData, resources)
       result[newName] = newValue
     }
   })
@@ -176,13 +176,25 @@ const transformUnsupportedTypeFiledValue = ({ name, value, type }) => {
 }
 
 const transformSetFieldValue = ({ name, value }, resources) => {
-  return [name, null]
+  return [name, generateNodeData(value, resources)]
 }
 
 const transformRepeaterFieldValue = ({ name, value }, resources) => {
-  if (Array.isArray()) {
-    return [name, null]
+  if (Array.isArray(value)) {
+    let isNodeLink = false
+    const entries = value.map(field => {
+      // the repeater fields are the only ones without a "name" attribute, so
+      // we need to fake one so that processFields works correctly.
+      const [fieldName, fieldValue] = processField(
+        { ...field, name: 'repeaterentry' },
+        resources
+      )
+      isNodeLink = fieldName.indexOf('___NODE') !== -1
+      return fieldValue
+    })
+    return [isNodeLink ? `${name}___NODE` : name, entries]
   }
+  return [name, []]
 }
 
 const transformCollectionLinkFieldValue = ({ name, value }, { item }) => {
@@ -246,6 +258,8 @@ const valueTransformers = {
 
   // nested fields need to be processed recursively
   collectionlink: transformCollectionLinkFieldValue,
+  set: transformSetFieldValue,
+  repeater: transformRepeaterFieldValue,
 
   // JSON data is stored stringified (and later stored parsed in a GraphQLJSON field)
   object: transformObjectFieldValue,
