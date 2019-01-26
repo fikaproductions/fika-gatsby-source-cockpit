@@ -64,7 +64,8 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
       collection.name,
       images,
       assets,
-      markdowns
+      markdowns,
+      configOptions,
     );
 
     collection.items.forEach(item => {

@@ -9,16 +9,14 @@ const {
 
 module.exports = class NewCollectionItemNodeFactory {
 
-  constructor(createNode, collectionName, images, assets, markdowns) {
+  constructor(createNode, collectionName, images, assets, markdowns, config) {
     this.createNode = createNode;
     this.collectionName = collectionName;
-    this.images = images;
-    this.assets = assets;
-    this.markdowns = markdowns;
     this.resources = {
       images,
       assets,
       markdowns,
+      config,
     }
   }
 
@@ -40,7 +38,7 @@ module.exports = class NewCollectionItemNodeFactory {
     }
 
     const nodeFactory = createNodeFactory(this.collectionName, item => {
-      const node = this.processFields(item);
+      const node = processFields(item, this.resources);
       node.id = generateNodeIdFromItem(item);
       return node;
     });
@@ -51,35 +49,31 @@ module.exports = class NewCollectionItemNodeFactory {
 
     return node;
   }
+}
 
-  processFields(item) {
-    const result = {};
-    // TODO: change this to a reduce implementation
-    Object.keys(item).forEach(fieldName => {
-      const [newFieldName, newValue] = this.processField(fieldName, item[fieldName]);
-      result[newFieldName] = newValue;
-    });
-    return result;
+const processFields = (item, resources) => {
+  const result = {};
+  // TODO: change this to a reduce implementation
+  Object.keys(item).forEach(name => {
+    const fieldData = {
+      ...item[name],
+      name,
+    };
+    const [newName, newValue] = processField(fieldData, resources);
+    result[newName] = newValue;
+  });
+  return result;
+}
+
+const processField = (fieldData, resources) => {
+  const { name, type } = fieldData;
+
+  if (!valueTransformers.hasOwnProperty(type)) {
+    console.warn(`Unknown field type '${type}' found for field '${name}' - skipping field.`);
+    return [name, null];
   }
 
-  /**
-   *
-   * @param fieldName
-   * @param fieldData
-   * @returns [ string, mixed] tuple of new field name and new field value
-   */
-  processField(fieldName, fieldData) {
-    const { type } = fieldData;
-    // switch type, assign value
-    if (!valueTransformers.hasOwnProperty(type)) {
-      console.warn(`Unknown field type '${type}' found for field '${fieldName}' - skipping field.`);
-      return [fieldName, null];
-    }
-    return valueTransformers[type]({
-      ...fieldData,
-      name: fieldName,
-    }, this.resources);
-  }
+  return valueTransformers[type](fieldData, resources);
 }
 
 const transformScalarFieldValue = ({ name, value }) => {
