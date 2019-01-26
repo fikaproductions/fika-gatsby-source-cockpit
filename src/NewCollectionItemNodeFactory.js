@@ -13,6 +13,7 @@ module.exports = class NewCollectionItemNodeFactory {
     this.createNode = createNode;
     this.collectionName = collectionName;
     this.resources = {
+      collectionName,
       images,
       assets,
       markdowns,
@@ -28,6 +29,7 @@ module.exports = class NewCollectionItemNodeFactory {
       : [];
     delete collectionItem.children;
 
+    // TODO: check if this is required - nodeFactory should create a node id already
     const generateNodeIdFromItem = (item) => {
       return generateNodeId(
         this.collectionName,
@@ -37,30 +39,49 @@ module.exports = class NewCollectionItemNodeFactory {
       )
     }
 
-    const nodeFactory = createNodeFactory(this.collectionName, item => {
-      const node = processFields(item, this.resources);
-      node.id = generateNodeIdFromItem(item);
+    const CollectionItem = createNodeFactory(this.collectionName, node => {
+      node.id = generateNodeIdFromItem(node);
+
+      if (Array.isArray(node.children)) {
+        node.children___NODE = node.children.map(child => {
+          child.parent___NODE = node.id;
+          return child.id;
+        });
+        delete node.children;
+      }
+
       return node;
     });
 
-    const node = nodeFactory(collectionItem);
-    linkChildrenToParent(node,  children);
+    const node = CollectionItem({
+        ...generateNodeData(collectionItem, this.resources),
+        children
+      }
+    );
     this.createNode(node);
-
     return node;
   }
 }
 
-const processFields = (item, resources) => {
+const generateNodeData = (item, resources) => {
   const result = {};
   // TODO: change this to a reduce implementation
   Object.keys(item).forEach(name => {
-    const fieldData = {
-      ...item[name],
-      name,
-    };
-    const [newName, newValue] = processField(fieldData, resources);
-    result[newName] = newValue;
+    if (['cockpitId', 'lang', 'level'].includes(name)) {
+      result[name] = item[name];
+    } else if (['children', 'parent'].includes(name)) {
+      // do nothing as we handle this values later in the process
+    } else {
+      const fieldData = {
+        ...item[name],
+        name,
+      };
+      const [newName, newValue] = processField(fieldData, {
+        ...resources,
+        item,
+      });
+      result[newName] = newValue;
+    }
   });
   return result;
 }
@@ -155,7 +176,6 @@ const transformUnsupportedTypeFiledValue = ({ name, value, type }) => {
 }
 
 const transformSetFieldValue = ({ name, value }, resources) => {
-  console.log(value);
   return [name, null];
 }
 
@@ -165,12 +185,14 @@ const transformRepeaterFieldValue = ({ name, value }, resources) => {
   }
 }
 
-/*
-const transformCollectionLinkFieldValue = (fieldName, value) => {
-  if (Array.isArray(value)) {
-    const collectionName = field.value[0].link;
+const transformCollectionLinkFieldValue = ({ name, value }, { item }) => {
 
-    field.value.forEach(linkedCollection => {
+  // TODO: we should probably "normalize" the collection link ids much earlier in the process
+  console.log(value);
+  if (Array.isArray(value)) {
+    const collectionName = value[0].link;
+
+    value.forEach(linkedCollection => {
       if (linkedCollection.link !== collectionName) {
         throw new Error(
           `One to many Collection-Links must refer to entries from a single collection (concerned field: ${fieldName})`
@@ -178,39 +200,25 @@ const transformCollectionLinkFieldValue = (fieldName, value) => {
       }
     });
 
-    field.value___NODE = field.value.map(linkedCollection =>
+    const result = value.map(linkedCollection =>
       generateNodeId(
         linkedCollection.link,
-        node.lang === "any"
+        item.lang === "any"
           ? linkedCollection._id
-          : `${linkedCollection._id}_${node.lang}`
+          : `${linkedCollection._id}_${item.lang}`
       )
     );
+    return [`${name}___NODE`, result];
   } else {
     const linkedNodeId = generateNodeId(
       value.link,
-      node.lang === "any"
+      item.lang === "any"
         ? value._id
-        : `${value._id}_${node.lang}`
+        : `${value._id}_${item.lang}`
     );
-    return [`${fieldName}___NODE`, linkedNodeId];
+    return [`${name}___NODE`, linkedNodeId];
   }
 }
-*/
-
-
-
-const linkChildrenToParent = (node, children) => {
-
-  if (Array.isArray(children) && children.length > 0) {
-    node.children___NODE = children.map(child => child.id);
-    children.forEach(child => {
-      child.parent___NODE = node.id;
-    });
-    delete node.children;
-  }
-};
-
 
 const valueTransformers = {
   // for these types we just copy the values from Cockpit without modification
@@ -241,6 +249,7 @@ const valueTransformers = {
   markdown: transformMarkdownFieldValue,
 
   // nested fields need to be processed recursively
+  collectionlink: transformCollectionLinkFieldValue,
 
 
   // JSON data is stored stringified (and later stored parsed in a GraphQLJSON field)
