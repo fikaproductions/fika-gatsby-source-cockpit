@@ -44,12 +44,12 @@ module.exports = class NewCollectionItemNodeFactory {
     const CollectionItem = createNodeFactory(this.collectionName, node => {
       node.id = generateNodeIdFromItem(node)
 
-      if (Array.isArray(node.children)) {
-        node.children___NODE = node.children.map(child => {
+      if (Array.isArray(node.childNodes)) {
+        node.children___NODE = node.childNodes.map(child => {
           child.parent___NODE = node.id
           return child.id
         })
-        delete node.children
+        delete node.childNodes
       }
 
       return node
@@ -60,7 +60,7 @@ module.exports = class NewCollectionItemNodeFactory {
         ...this.resources,
         item: collectionItem,
       }),
-      children,
+      childNodes: children,
     })
     this.createNode(node)
     return node
