@@ -7,6 +7,8 @@ const {
   typePrefix: 'Cockpit',
 })
 
+// TODO: add option to enabled "default" values that are not erased in the Graphql tree
+// TODO: do we need a class? most of the rest of the code is functional
 module.exports = class NewCollectionItemNodeFactory {
   constructor(createNode, collectionName, images, assets, markdowns, config) {
     this.createNode = createNode
@@ -21,6 +23,7 @@ module.exports = class NewCollectionItemNodeFactory {
   }
 
   create(collectionItem) {
+    // TODO: can i move this to the node factory?
     const children = collectionItem.hasOwnProperty('children')
       ? collectionItem.children.map(childItem => {
           return this.create(childItem)
@@ -36,6 +39,8 @@ module.exports = class NewCollectionItemNodeFactory {
       )
     }
 
+    // TODO: recreating the node factory for every item kind of defeats the purpose
+    // of having a factory
     const CollectionItem = createNodeFactory(this.collectionName, node => {
       node.id = generateNodeIdFromItem(node)
 
@@ -65,6 +70,7 @@ module.exports = class NewCollectionItemNodeFactory {
 const generateNodeData = (item, resources) => {
   const result = {}
   // TODO: change this to a reduce implementation
+  // TODO: add context information (hierarchy in tree) to fieldData
   Object.keys(item).forEach(name => {
     if (['cockpitId', 'lang', 'level'].includes(name)) {
       result[name] = item[name]
@@ -75,6 +81,8 @@ const generateNodeData = (item, resources) => {
         ...item[name],
         name,
       }
+
+      // TODO: is this Tuple the best solution?
       const [newName, newValue] = processField(fieldData, resources)
       result[newName] = newValue
     }
@@ -85,6 +93,7 @@ const generateNodeData = (item, resources) => {
 const processField = (fieldData, resources) => {
   const { name, type } = fieldData
 
+  // TODO: add check if type is present
   if (!valueTransformers.hasOwnProperty(type)) {
     console.warn(
       `Unknown field type '${type}' found for field '${name}' - skipping field.`
@@ -95,6 +104,7 @@ const processField = (fieldData, resources) => {
   return valueTransformers[type](fieldData, resources)
 }
 
+// TODO: rename, we are not transforming anything
 const transformScalarFieldValue = ({ name, value }) => {
   return [name, value]
 }
@@ -228,18 +238,19 @@ const transformCollectionLinkFieldValue = ({ name, value }, { item }) => {
   }
 }
 
+// TODO: extract this all to a different file/module/class
 const valueTransformers = {
   // for these types we just copy the values from Cockpit without modification
-  text: transformScalarFieldValue,
-  textarea: transformScalarFieldValue,
+  text: transformScalarFieldValue, // TODO: strip html tags (on demand)
+  textarea: transformScalarFieldValue, // TODO: strip html tags (on demand)
   boolean: transformScalarFieldValue,
   code: transformScalarFieldValue,
   rating: transformScalarFieldValue,
-  location: transformScalarFieldValue,
+  location: transformScalarFieldValue, // TODO: address field might not be set
   select: transformScalarFieldValue,
   multipleselect: transformScalarFieldValue,
   tags: transformScalarFieldValue,
-  date: transformScalarFieldValue,
+  date: transformScalarFieldValue, // TODO: parse date
   time: transformScalarFieldValue,
 
   // for colors we parse the color and generate an object with color information
@@ -247,14 +258,14 @@ const valueTransformers = {
   colortag: transformColorFieldValue,
 
   // files & images are downloaded and stored in separate nodes, we just need to link them
-  asset: transformAssetFieldValue,
-  image: transformImageFieldValue,
-  gallery: transformGalleryFieldValue,
+  asset: transformAssetFieldValue, // TODO: evaluate metadata
+  image: transformImageFieldValue, // TODO: evaluate metadata
+  gallery: transformGalleryFieldValue, // TODO: evaluate metadata
 
   // html text will be parsed and optionally cleaned
-  html: transformHTMLFieldValue,
-  wysiwyg: transformHTMLFieldValue,
-  markdown: transformMarkdownFieldValue,
+  html: transformHTMLFieldValue, // TODO: parse HTML, sanitize HTML
+  wysiwyg: transformHTMLFieldValue, // TODO: parse HTML, sanitize HTML
+  markdown: transformMarkdownFieldValue, // TODO: transform markdown to html?
 
   // nested fields need to be processed recursively
   collectionlink: transformCollectionLinkFieldValue,
@@ -262,14 +273,14 @@ const valueTransformers = {
   repeater: transformRepeaterFieldValue,
 
   // JSON data is stored stringified (and later stored parsed in a GraphQLJSON field)
-  object: transformObjectFieldValue,
-  layout: transformLayoutFieldValue,
+  object: transformObjectFieldValue, // TODO: store as JSON Node
+  layout: transformLayoutFieldValue, // TODO: store as JSON Node (separate PR)
   'layout-grid': transformLayoutFieldValue,
 
   // not implemented yet but should be possible to implement
-  'access-list': transformUnsupportedTypeFiledValue,
-  'account-link': transformUnsupportedTypeFiledValue,
-  file: transformUnsupportedTypeFiledValue,
+  'access-list': transformUnsupportedTypeFiledValue, // TODO: implement
+  'account-link': transformUnsupportedTypeFiledValue, // TODO: implement
+  file: transformUnsupportedTypeFiledValue, // TODO: implement
 
   // password is returned encoded; there is probably no situation where this will
   // be useful in Gatsby therefore we just print a warning and ignore it for now.
