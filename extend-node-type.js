@@ -91,17 +91,30 @@ module.exports = async ({ type, cache }) => {
   let nodeExtendType = {}
 
   cachedData.items.forEach(item => {
-    const jsonFields = Object.keys(item).filter(
+    const layoutFields = Object.keys(item).filter(
       fieldname =>
         item[fieldname].type === 'layout' ||
         item[fieldname].type === 'layout-grid'
     )
 
-    jsonFields.forEach(fieldname => {
+    layoutFields.forEach(fieldname => {
       nodeExtendType[`${fieldname}_parsed`] = {
         type: GraphQLJSON,
         resolve(Item) {
-          return parseLayout(Item[`${fieldname}`].value)
+          return parseLayout(JSON.parse(Item[`${fieldname}`].value))
+        },
+      }
+    })
+
+    const objectFields = Object.keys(item).filter(
+      fieldname => item[fieldname].type === 'object'
+    )
+
+    objectFields.forEach(fieldName => {
+      nodeExtendType[`${fieldName}_parsed`] = {
+        type: GraphQLJSON,
+        resolve(Item) {
+          return JSON.parse(Item[`${fieldName}`].value)
         },
       }
     })

@@ -34,6 +34,7 @@ module.exports = class CollectionItemNodeFactory {
       linkAssetFieldsToAssetNodes(node, this.assets)
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
+      encodeObjectsAsJSONStrings(node)
       linkChildrenToParent(node, children)
 
       return node
@@ -66,6 +67,12 @@ const linkAssetFieldsToAssetNodes = (node, assets) => {
   getFieldsOfTypes(node, ['asset']).forEach(field => {
     field.value___NODE = assets[field.value].id
     delete field.value
+  })
+}
+
+const encodeObjectsAsJSONStrings = (node, assets) => {
+  getFieldsOfTypes(node, ['layout', 'layout-grid', 'object']).forEach(field => {
+    field.value = JSON.stringify(field.value)
   })
 }
 
