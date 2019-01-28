@@ -2,7 +2,7 @@
 
 This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections data.
 
-Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.
+Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, linked collections and internationalization.
 
 ## Installation
 
@@ -45,6 +45,7 @@ plugins: [
       baseUrl:
         'YOUR_COCKPIT_API_BASE_URL', // (1)
       locales: ['EVERY_LANGUAGE_KEYS_DEFINED_IN_YOUR_COCKPIT_CONFIGURATION'], // (2)
+      collections: [] // (3)
     },
   },
 ]
@@ -54,6 +55,7 @@ Notes:
 
 1. E.g. `'http://localhost:8080'`.
 2. E.g. `['en', 'fr']`.
+3. The specific Cockpit collections you want to fetch. If empty or null all collections will be fetched. E.g. `['Products', 'Menu']`
 
 Adding the `gatsby-source-filesystem` dependency to your project grants access to the `publicURL` field resolver attribute on the file nodes that this plugin generates by extending the GraphQL type of the file nodes. So, as you can guess, the path specified in the plugin options could be anything, we do not need it to load any local files, we are just taking advantage of its extension of the file node type.
 
@@ -212,6 +214,107 @@ Notes:
 
 1. You can access the raw Markdown with this attribute.
 
+#### Set
+
+The set field type allows to logically group a number of other fields together.
+
+You can then access their values as an object in the `value` of the set field.
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        ContactData { // field of type set
+          value {
+            telephone {
+              value
+            }
+            fax {
+              value
+            }
+            email {
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Repeater
+
+Repeater fields are one of the most powerful fields in Cockpit and allow support for two distinct use cases:
+
+1.  Repeat any other field type (including the set type) an arbitrary number of times resulting in an array of fields with the same type (E.g. `[Image, Image, Image]`)
+1.  Choose from a number of specified fields an arbitrary number of times resulting in an array where each entry might be of a different type (E.g `[Image, Text, Set]`)
+
+For the first case the values can be queried almost like a normal scalar field. The only difference is that two nested values are needed with the first one representing the array and the second one the value in the array.
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        responsibilities { // field of type repeater
+          value { // value of repeater (array)
+            value // value of repeated field
+          }
+        }
+      }
+    }
+  }
+```
+
+The second case is a bit more complicated - in order to not cause any GraphQL Schema conflicts each array value must be of the same type. To achieve this the `gatsby-source-cockpit` plugin implicitely wraps the values in a set field, generating one field in the set for each `fields` option supplied in the repeater configuration.
+
+E.g. assuming the repeater field is configured with these options:
+
+```
+{
+  "fields": [
+    {
+      "name": "title",
+      "type": "text",
+      "label": "Some text",
+    },
+    {
+      "name": "photo",
+      "type": "image",
+      "label": "Funny Photo",
+    }
+  ]
+}
+```
+
+then the following query is necessary to get the data:
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        responsibilities { // field of type repeater
+          value { // value of repeater (array)
+            title {
+              value
+            }
+            photo {
+              value {
+                ...
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+```
+
+**Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitely specify the `name` value.
+
 ---
 
-## Powered by &nbsp; — &nbsp;&nbsp; <a href="https://fikaproductions.com"><img align="center" width="300" height="50" src="src/images/logo.png"></a>
+## Powered by &nbsp; — &nbsp;&nbsp; <a href="https://www.fikaproductions.com"><img align="center" width="200" height="200" src="src/images/logo.png"></a>

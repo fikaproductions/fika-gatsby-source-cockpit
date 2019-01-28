@@ -6,18 +6,19 @@ const CollectionItemNodeFactory = require('./src/CollectionItemNodeFactory')
 const {
   MARKDOWN_IMAGE_REGEXP_GLOBAL,
   MARKDOWN_ASSET_REGEXP_GLOBAL,
-  TYPE_PREFIX_COCKPIT
-} = require('./src/constants');
+  TYPE_PREFIX_COCKPIT,
+} = require('./src/constants')
 const FileNodeFactory = require('./src/FileNodeFactory')
 const MarkdownNodeFactory = require('./src/MarkdownNodeFactory')
 
-exports.setFieldsOnGraphQLNodeType= require('./extend-node-type');
+exports.setFieldsOnGraphQLNodeType = require('./extend-node-type')
 exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   const { createNode } = actions
   const cockpit = new CockpitService(
     configOptions.baseUrl,
     configOptions.token,
-    configOptions.locales
+    configOptions.locales,
+    configOptions.collections
   )
   const fileNodeFactory = new FileNodeFactory(createNode, store, cache)
   const markdownNodeFactory = new MarkdownNodeFactory(createNode)
@@ -26,15 +27,9 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   await cockpit.validateToken()
 
   const collections = await cockpit.getCollections()
-  const images = await cockpit.normalizeCollectionsImages(collections)
-  const assets = await cockpit.normalizeCollectionsAssets(collections)
-  const markdowns = await cockpit.normalizeCollectionsMarkdowns(
-    collections,
-    images,
-    assets
-  )
+  const { images, assets, markdowns } = cockpit.normalizeResources(collections)
 
-  cache.set(TYPE_PREFIX_COCKPIT, collections);
+  cache.set(TYPE_PREFIX_COCKPIT, collections)
 
   for (let path in images) {
     const imageNode = await fileNodeFactory.createImageNode(path)
