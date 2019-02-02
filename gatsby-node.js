@@ -10,6 +10,7 @@ const {
 } = require('./src/constants')
 const FileNodeFactory = require('./src/FileNodeFactory')
 const MarkdownNodeFactory = require('./src/MarkdownNodeFactory')
+const LayoutNodeFactory = require('./src/LayoutNodeFactory')
 
 exports.setFieldsOnGraphQLNodeType = require('./extend-node-type')
 exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
@@ -22,12 +23,15 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
   )
   const fileNodeFactory = new FileNodeFactory(createNode, store, cache)
   const markdownNodeFactory = new MarkdownNodeFactory(createNode)
+  const layoutNodeFactory = new LayoutNodeFactory(createNode)
 
   await cockpit.validateBaseUrl()
   await cockpit.validateToken()
 
   const collections = await cockpit.getCollections()
-  const { images, assets, markdowns } = cockpit.normalizeResources(collections)
+  const { images, assets, markdowns, layouts } = cockpit.normalizeResources(
+    collections
+  )
 
   cache.set(TYPE_PREFIX_COCKPIT, collections)
 
@@ -56,13 +60,19 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
     markdowns[markdown] = { id }
   }
 
+  for (let layout in layouts) {
+    const id = layoutNodeFactory.create(layouts[layout])
+    layouts[layout] = { id }
+  }
+
   collections.forEach(collection => {
     const nodeFactory = new CollectionItemNodeFactory(
       createNode,
       collection.name,
       images,
       assets,
-      markdowns
+      markdowns,
+      layouts
     )
 
     collection.items.forEach(item => {

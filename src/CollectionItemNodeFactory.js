@@ -1,3 +1,4 @@
+const hash = require('string-hash')
 const { TYPE_PREFIX_COCKPIT } = require('./constants')
 
 const {
@@ -9,12 +10,13 @@ const {
 const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 
 module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName, images, assets, markdowns) {
+  constructor(createNode, collectionName, images, assets, markdowns, layouts) {
     this.createNode = createNode
     this.collectionName = collectionName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
+    this.layouts = layouts
   }
 
   create(collectionItem) {
@@ -33,6 +35,7 @@ module.exports = class CollectionItemNodeFactory {
       linkImageFieldsToImageNodes(node, this.images)
       linkAssetFieldsToAssetNodes(node, this.assets)
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
+      linkLayoutFieldsToLAyoutNodes(node, this.layouts)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
       encodeObjectsAsJSONStrings(node)
       linkChildrenToParent(node, children)
@@ -79,6 +82,14 @@ const encodeObjectsAsJSONStrings = (node, assets) => {
 const linkMarkdownFieldsToMarkdownNodes = (node, markdowns) => {
   getFieldsOfTypes(node, ['markdown']).forEach(field => {
     field.value___NODE = markdowns[field.value].id
+    delete field.value
+  })
+}
+
+const linkLayoutFieldsToLAyoutNodes = (node, layouts) => {
+  getFieldsOfTypes(node, ['layout', 'layout-grid']).forEach(field => {
+    const layoutHash = hash(JSON.stringify(field.value))
+    field.value___NODE = layouts[layoutHash].id
     delete field.value
   })
 }

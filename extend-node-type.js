@@ -21,20 +21,16 @@ async function getCockpitData(cache, typeName) {
 }
 
 module.exports = async ({ type, cache }) => {
-  console.log('Type name:', type.name)
   if (!type.name.startsWith(TYPE_PREFIX_COCKPIT)) {
     return {}
   }
-
   const cachedData = await getCockpitData(cache, type.name)
-  if (!cachedData) {
-    return {}
-  }
 
   const parseLayout = layout => {
     if (layout == null || layout.length === 0) {
       return layout
     }
+
     return layout.map(node => {
       if (node.settings) {
         node = parseSettings(node)
@@ -50,7 +46,6 @@ module.exports = async ({ type, cache }) => {
       return node
     })
   }
-
   const parseHtml = (type, node) => {
     const { settings } = node
     if (settings[type] === '') {
@@ -87,37 +82,30 @@ module.exports = async ({ type, cache }) => {
     }
     return node
   }
-
   let nodeExtendType = {}
+  if (type.name === 'CockpitLayoutNode') {
+    nodeExtendType['parsed'] = {
+      type: GraphQLJSON,
+      resolve(Item) {
+        return parseLayout(JSON.parse(Item.internal.content))
+      },
+    }
+  } else if (cachedData && cachedData.items) {
+    cachedData.items.forEach(item => {
+      const objectFields = Object.keys(item).filter(
+        fieldname => item[fieldname].type === 'object'
+      )
 
-  cachedData.items.forEach(item => {
-    const layoutFields = Object.keys(item).filter(
-      fieldname =>
-        item[fieldname].type === 'layout' ||
-        item[fieldname].type === 'layout-grid'
-    )
-
-    layoutFields.forEach(fieldname => {
-      nodeExtendType[`${fieldname}_parsed`] = {
-        type: GraphQLJSON,
-        resolve(Item) {
-          return parseLayout(JSON.parse(Item[`${fieldname}`].value))
-        },
-      }
+      objectFields.forEach(fieldName => {
+        nodeExtendType[`${fieldName}_parsed`] = {
+          type: GraphQLJSON,
+          resolve(Item) {
+            return JSON.parse(Item[`${fieldName}`].value)
+          },
+        }
+      })
     })
+  }
 
-    const objectFields = Object.keys(item).filter(
-      fieldname => item[fieldname].type === 'object'
-    )
-
-    objectFields.forEach(fieldName => {
-      nodeExtendType[`${fieldName}_parsed`] = {
-        type: GraphQLJSON,
-        resolve(Item) {
-          return JSON.parse(Item[`${fieldName}`].value)
-        },
-      }
-    })
-  })
   return nodeExtendType
 }
