@@ -1,5 +1,6 @@
 const hash = require('string-hash')
 const { TYPE_PREFIX_COCKPIT } = require('./constants')
+const ObjectNodeFactory = require('./ObjectNodeFactory')
 
 const {
   createNodeFactory,
@@ -17,6 +18,8 @@ module.exports = class CollectionItemNodeFactory {
     this.assets = assets
     this.markdowns = markdowns
     this.layouts = layouts
+
+    this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
 
   create(collectionItem) {
@@ -37,7 +40,7 @@ module.exports = class CollectionItemNodeFactory {
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
       linkLayoutFieldsToLAyoutNodes(node, this.layouts)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
-      encodeObjectsAsJSONStrings(node)
+      createObjectNodes(node, this.objectNodeFactory)
       linkChildrenToParent(node, children)
 
       return node
@@ -73,9 +76,11 @@ const linkAssetFieldsToAssetNodes = (node, assets) => {
   })
 }
 
-const encodeObjectsAsJSONStrings = (node, assets) => {
-  getFieldsOfTypes(node, ['layout', 'layout-grid', 'object']).forEach(field => {
-    field.value = JSON.stringify(field.value)
+const createObjectNodes = (node, objectNodeFactory) => {
+  getFieldsOfTypes(node, ['object']).forEach(field => {
+    const objectNodeId = objectNodeFactory.create(field.value)
+    field.value___NODE = objectNodeId
+    delete field.value
   })
 }
 

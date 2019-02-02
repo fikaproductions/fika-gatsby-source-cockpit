@@ -6,25 +6,10 @@ const htmlToReactParser = new HtmlToReactParser()
 
 const { TYPE_PREFIX_COCKPIT } = require('./src/constants')
 
-async function getCockpitData(cache, typeName) {
-  try {
-    const cachedData = await cache.get(TYPE_PREFIX_COCKPIT)
-    const cockpitTypeName = typeName.replace(TYPE_PREFIX_COCKPIT, '')
-    const cachedDataForType = cachedData.filter(
-      entry =>
-        entry.name.toLocaleLowerCase() === cockpitTypeName.toLocaleLowerCase()
-    )
-    return cachedDataForType.length > 0 ? cachedDataForType[0] : false
-  } catch (e) {
-    return false
-  }
-}
-
-module.exports = async ({ type, cache }) => {
+module.exports = async ({ type }) => {
   if (!type.name.startsWith(TYPE_PREFIX_COCKPIT)) {
     return {}
   }
-  const cachedData = await getCockpitData(cache, type.name)
 
   const parseLayout = layout => {
     if (layout == null || layout.length === 0) {
@@ -82,7 +67,9 @@ module.exports = async ({ type, cache }) => {
     }
     return node
   }
+
   let nodeExtendType = {}
+
   if (type.name === 'CockpitLayoutNode') {
     nodeExtendType['parsed'] = {
       type: GraphQLJSON,
@@ -90,21 +77,13 @@ module.exports = async ({ type, cache }) => {
         return parseLayout(JSON.parse(Item.internal.content))
       },
     }
-  } else if (cachedData && cachedData.items) {
-    cachedData.items.forEach(item => {
-      const objectFields = Object.keys(item).filter(
-        fieldname => item[fieldname].type === 'object'
-      )
-
-      objectFields.forEach(fieldName => {
-        nodeExtendType[`${fieldName}_parsed`] = {
-          type: GraphQLJSON,
-          resolve(Item) {
-            return JSON.parse(Item[`${fieldName}`].value)
-          },
-        }
-      })
-    })
+  } else if (type.name === 'CockpitObjectNode') {
+    nodeExtendType['data'] = {
+      type: GraphQLJSON,
+      resolve(Item) {
+        return JSON.parse(Item.internal.content)
+      },
+    }
   }
 
   return nodeExtendType
