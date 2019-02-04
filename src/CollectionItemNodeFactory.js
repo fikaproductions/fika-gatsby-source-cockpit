@@ -38,7 +38,7 @@ module.exports = class CollectionItemNodeFactory {
       linkImageFieldsToImageNodes(node, this.images)
       linkAssetFieldsToAssetNodes(node, this.assets)
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
-      linkLayoutFieldsToLAyoutNodes(node, this.layouts)
+      linkLayoutFieldsToLayoutNodes(node, this.layouts)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
       createObjectNodes(node, this.objectNodeFactory)
       linkChildrenToParent(node, children)
@@ -91,7 +91,7 @@ const linkMarkdownFieldsToMarkdownNodes = (node, markdowns) => {
   })
 }
 
-const linkLayoutFieldsToLAyoutNodes = (node, layouts) => {
+const linkLayoutFieldsToLayoutNodes = (node, layouts) => {
   getFieldsOfTypes(node, ['layout', 'layout-grid']).forEach(field => {
     const layoutHash = hash(JSON.stringify(field.value))
     field.value___NODE = layouts[layoutHash].id
