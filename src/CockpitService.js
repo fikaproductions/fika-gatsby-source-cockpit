@@ -294,6 +294,11 @@ const createCollectionItem = (
 ) => {
   const item = {
     cockpitId: collectionEntry._id,
+    cockpitCreated: new Date(collectionEntry._created * 1000),
+    cockpitModified: new Date(collectionEntry._modified * 1000),
+    // TODO: Replace with Users... once implemented (GitHub Issue #15)
+    cockpitBy: collectionEntry._by,
+    cockpitModifiedBy: collectionEntry._mby,
     lang: locale == null ? 'any' : locale,
     level: level,
   }

@@ -71,6 +71,10 @@ Collections are converted into nodes. You can access many collection entries at 
     edges {
       node { // (2)
         cockpitId // (3)
+        cockpitCreated // (3)
+        cockpitModified // (3)
+        cockpitBy // (3)
+        cockpitModifiedBy // (3)
         TeamMember1
         TeamMember2
         TeamMember3
@@ -85,7 +89,7 @@ Notes:
 
 1. You can filter amongst them.
 2. Each node is a collection entry in an array.
-3. You can get the original Cockpit element's id (aka the `_id`) that way.
+3. You can get the original Cockpit element's id (aka the `_id`), creation and modification dates and authors' (ids for now) that way.
 4. You can access descendant collection entries within that field if you have hierarchically structured your collection entries in Cockpit (_Custom sortable entries_ turned on).
 
 Or you can access one entry at the time that way:
