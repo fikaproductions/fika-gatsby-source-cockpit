@@ -1,13 +1,14 @@
 const mime = require('mime')
 const request = require('request-promise')
-const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 const slugify = require('slugify')
+const hash = require('string-hash')
 
 const {
   METHODS,
   MARKDOWN_IMAGE_REGEXP,
   MARKDOWN_ASSET_REGEXP,
 } = require('./constants')
+const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 
 module.exports = class CockpitService {
   constructor(baseUrl, token, locales, whiteListedCollectionNames = []) {
@@ -102,6 +103,7 @@ module.exports = class CockpitService {
     const existingImages = {}
     const existingAssets = {}
     const existingMarkdowns = {}
+    const existingLayouts = {}
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
@@ -113,6 +115,13 @@ module.exports = class CockpitService {
           existingAssets,
           existingMarkdowns
         )
+        this.normalizeCollectionItemLayouts(
+          item,
+          existingImages,
+          existingAssets,
+          existingMarkdowns,
+          existingLayouts
+        )
       })
     })
 
@@ -120,6 +129,7 @@ module.exports = class CockpitService {
       images: existingImages,
       assets: existingAssets,
       markdowns: existingMarkdowns,
+      layouts: existingLayouts,
     }
   }
 
@@ -211,6 +221,35 @@ module.exports = class CockpitService {
           existingImages,
           existingAssets,
           existingMarkdowns
+        )
+      })
+    }
+  }
+
+  normalizeCollectionItemLayouts(
+    item,
+    existingImages,
+    existingAssets,
+    existingMarkdowns,
+    existingLayouts
+  ) {
+    getFieldsOfTypes(item, ['layout', 'layout-grid']).forEach(layoutField => {
+      const stringifiedLayout = JSON.stringify(layoutField.value)
+      const layoutHash = hash(stringifiedLayout)
+      existingLayouts[layoutHash] = layoutField.value
+      // TODO: this still needs to be implemented for layout fields
+      // extractImagesFromMarkdown(markdownField.value, existingImages)
+      // extractAssetsFromMarkdown(markdownField.value, existingAssets)
+    })
+
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemLayouts(
+          child,
+          existingImages,
+          existingAssets,
+          existingMarkdowns,
+          existingLayouts
         )
       })
     }

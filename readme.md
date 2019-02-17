@@ -2,7 +2,7 @@
 
 This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections data.
 
-Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, linked collections and internationalization.
+Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, layout(-grid)s (currently only without nested images/assets), objects, linked collections and internationalization.
 
 ## Installation
 
@@ -10,10 +10,10 @@ Actually, it supports querying raw texts (and any trivial field types), Markdown
 npm install --save @fika/gatsby-source-cockpit
 ```
 
-This project has `gatsby-source-filesystem` as a peer dependency, don't forget to install it as well.
+This project has `gatsby-source-filesystem`, `gatsby` and `react` as peer dependencies, don't forget to install them as well.
 
 ```
-npm install --save gatsby-source-filesystem
+npm install --save gatsby-source-filesystem gatsby react
 ```
 
 ## Contributing
@@ -146,7 +146,7 @@ Notes:
 1. The type is `'collectionlink'` and it was originally refering to an entry of the TeamMember collection.
 2. The refered node is attached here. The language is preserved across these bindings.
 
-#### Images and gallery
+#### Images and galleries
 
 Image and gallery fields nested within a collection will be downloaded and will get one or more file(s) node(s) attached under the `value` attribute like this:
 
@@ -183,7 +183,7 @@ Just like image fields, asset fields nested within a collection will be download
 
 You can access the file regardless of its type (document, video, etc.) using the `publicURL` field resolver attribute on the file node.
 
-#### Markdown
+#### Markdowns
 
 Markdown fields nested within a collection will get a custom Markdown node attached under the `value` attribute. It mimics a file node — even if there is no existing Markdown file — in order to allow plugins like `gatsby-transformer-remark` to process them. Moreover, images and assets embedded into the Markdown are downloaded and their paths are updated accordingly. Example:
 
@@ -214,7 +214,7 @@ Notes:
 
 1. You can access the raw Markdown with this attribute.
 
-#### Set
+#### Sets
 
 The set field type allows to logically group a number of other fields together.
 
@@ -244,12 +244,12 @@ You can then access their values as an object in the `value` of the set field.
 }
 ```
 
-#### Repeater
+#### Repeaters
 
 Repeater fields are one of the most powerful fields in Cockpit and allow support for two distinct use cases:
 
 1.  Repeat any other field type (including the set type) an arbitrary number of times resulting in an array of fields with the same type (E.g. `[Image, Image, Image]`)
-1.  Choose from a number of specified fields an arbitrary number of times resulting in an array where each entry might be of a different type (E.g `[Image, Text, Set]`)
+1.  Choose from a number of specified fields an arbitrary number of times resulting in an array where each entry might be of a different type (E.g. `[Image, Text, Set]`)
 
 For the first case the values can be queried almost like a normal scalar field. The only difference is that two nested values are needed with the first one representing the array and the second one the value in the array.
 
@@ -314,6 +314,58 @@ then the following query is necessary to get the data:
 ```
 
 **Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitely specify the `name` value.
+
+#### Layouts and layout-grids
+
+The layout(-grid) field type allows to compose a view with UI components (buttons, divider, text, custom components, …).
+
+You can access the whole components hierarchy using the `parsed` field. The type of each component is set in the `component` field. All the component settings defined in Cockpit are present in the `settings` field. Some of them are raw, others are processed:
+
+- `class` is changed for `className`;
+- `style` is processed into a CSS-in-JS-like object;
+- `html` is accessible unchanged into `html`, but also accessible processed into `html_sanitize` (which is sanitized) and into `html_react` (which is a JS representation of a React component).
+
+E.g.
+
+```
+{
+  allCockpitPageLayout {
+    edges {
+      node {
+        layout {
+          value {
+            parsed
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Note:** Images and assets used in a layout aren't currently supported.
+
+#### Objects
+
+The object field type allows to structure data as a JSON object. You can get the whole object using the `data` field.
+
+E.g.
+
+```
+{
+  allCockpitLogEntries {
+    edges {
+      node {
+        logEntry {
+          value {
+            data
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 ---
 

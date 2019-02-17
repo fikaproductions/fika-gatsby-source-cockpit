@@ -8,24 +8,25 @@ const {
 })
 const hash = require('string-hash')
 
-module.exports = class MarkdownNodeFactory {
+module.exports = class LayoutNodeFactory {
   constructor(createNode) {
     this.createNode = createNode
   }
 
-  create(markdown) {
-    const partialId = `${hash(markdown)}`
+  create(layout) {
+    const stringifiedLayout = JSON.stringify(layout)
+    const partialId = `${hash(stringifiedLayout)}`
 
     this.createNode(
-      createNodeFactory('Markdown', node => {
-        node.internal.mediaType = 'text/markdown'
-        node.internal.content = markdown
+      createNodeFactory('LayoutNode', node => {
+        node.internal.mediaType = 'application/json'
+        node.internal.content = stringifiedLayout
         delete node.cockpitId
 
         return node
       })({ id: partialId })
     )
 
-    return generateNodeId('Markdown', partialId)
+    return generateNodeId('LayoutNode', partialId)
   }
 }
