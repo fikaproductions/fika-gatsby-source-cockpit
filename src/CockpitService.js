@@ -8,10 +8,11 @@ const {
 } = require('./constants')
 
 module.exports = class CockpitService {
-  constructor(baseUrl, token, locales) {
+  constructor(baseUrl, token, locales, whiteListedCollectionNames = []) {
     this.baseUrl = baseUrl
     this.token = token
     this.locales = locales
+    this.whiteListedCollectionNames = whiteListedCollectionNames
   }
 
   async fetch(endpoint, method, lang = null) {
@@ -75,8 +76,19 @@ module.exports = class CockpitService {
 
   async getCollections() {
     const names = await this.getCollectionNames()
+    const whiteListedNames = this.whiteListedCollectionNames
 
-    return Promise.all(names.map(name => this.getCollection(name)))
+    return Promise.all(
+      names
+        .filter(
+          name =>
+            whiteListedNames === null ||
+            (Array.isArray(whiteListedNames) &&
+              whiteListedNames.length === 0) ||
+            whiteListedNames.includes(name)
+        )
+        .map(name => this.getCollection(name))
+    )
   }
 
   normalizeCollectionsImages(collections, existingImages = {}) {
