@@ -2,7 +2,7 @@
 
 This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections data.
 
-Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.
+Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, linked collections and internationalization.
 
 ## Installation
 
@@ -214,6 +214,107 @@ Notes:
 
 1. You can access the raw Markdown with this attribute.
 
+#### Set
+
+The set field type allows to logically group a number of other fields together.
+
+You can then access their values as an object in the `value` of the set field.
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        ContactData { // field of type set
+          value {
+            telephone {
+              value
+            }
+            fax {
+              value
+            }
+            email {
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Repeater
+
+Repeater fields are one of the most powerful fields in Cockpit and allow support for two distinct use cases:
+
+1.  Repeat any other field type (including the set type) an arbitrary number of times resulting in an array of fields with the same type (E.g. `[Image, Image, Image]`)
+1.  Choose from a number of specified fields an arbitrary number of times resulting in an array where each entry might be of a different type (E.g `[Image, Text, Set]`)
+
+For the first case the values can be queried almost like a normal scalar field. The only difference is that two nested values are needed with the first one representing the array and the second one the value in the array.
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        responsibilities { // field of type repeater
+          value { // value of repeater (array)
+            value // value of repeated field
+          }
+        }
+      }
+    }
+  }
+```
+
+The second case is a bit more complicated - in order to not cause any GraphQL Schema conflicts each array value must be of the same type. To achieve this the `gatsby-source-cockpit` plugin implicitely wraps the values in a set field, generating one field in the set for each `fields` option supplied in the repeater configuration.
+
+E.g. assuming the repeater field is configured with these options:
+
+```
+{
+  "fields": [
+    {
+      "name": "title",
+      "type": "text",
+      "label": "Some text",
+    },
+    {
+      "name": "photo",
+      "type": "image",
+      "label": "Funny Photo",
+    }
+  ]
+}
+```
+
+then the following query is necessary to get the data:
+
+```
+{
+  allCockpitTeamMember {
+    edges {
+      node {
+        responsibilities { // field of type repeater
+          value { // value of repeater (array)
+            title {
+              value
+            }
+            photo {
+              value {
+                ...
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+```
+
+**Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitely specify the `name` value.
+
 ---
 
-## Powered by &nbsp; — &nbsp;&nbsp; <a href="https://fikaproductions.com"><img align="center" width="300" height="50" src="src/images/logo.png"></a>
+## Powered by &nbsp; — &nbsp;&nbsp; <a href="https://www.fikaproductions.com"><img align="center" width="200" height="200" src="src/images/logo.png"></a>
