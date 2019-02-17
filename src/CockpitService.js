@@ -79,107 +79,134 @@ module.exports = class CockpitService {
     return Promise.all(names.map(name => this.getCollection(name)));
   }
 
-  normalizeCollectionsImages(collections) {
-    const images = {};
+  normalizeCollectionsImages(collections, existingImages = {}) {
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        Object.keys(item)
-          .filter(
-            fieldName =>
-              item[fieldName].type === "image" ||
-              item[fieldName].type === "gallery"
-          )
-          .forEach(fieldName => {
-            if (!Array.isArray(item[fieldName].value)) {
-              const imageField = item[fieldName];
-              let path = imageField.value.path;
+        this.normalizeCollectionItemImages(item, existingImages);
+      });
+    });
 
-              if (path == null) {
-                return;
-              }
+    return existingImages;
+  }
 
-              trimAssetField(imageField);
+  normalizeCollectionItemImages(item, existingImages) {
+    Object.keys(item)
+      .filter(
+        fieldName =>
+          item[fieldName].type === "image" ||
+          item[fieldName].type === "gallery"
+      )
+      .forEach(fieldName => {
+        if (!Array.isArray(item[fieldName].value)) {
+          const imageField = item[fieldName];
+          let path = imageField.value.path;
 
-              if (path.startsWith("/")) {
-                path = `${this.baseUrl}${path}`;
-              } else if (!path.startsWith("http")) {
-                path = `${this.baseUrl}/${path}`;
-              }
+          if (path == null) {
+            return;
+          }
 
-              imageField.value = path;
-              images[path] = null;
-            } else {
-              const galleryField = item[fieldName];
+          trimAssetField(imageField);
 
-              galleryField.value.forEach(galleryImageField => {
-                let path = galleryImageField.path;
+          if (path.startsWith("/")) {
+            path = `${this.baseUrl}${path}`;
+          } else if (!path.startsWith("http")) {
+            path = `${this.baseUrl}/${path}`;
+          }
 
-                if (path == null) {
-                  return;
-                }
-  
-                trimGalleryImageField(galleryImageField);
+          imageField.value = path;
+          existingImages[path] = null;
+        } else {
+          const galleryField = item[fieldName];
 
-                if (path.startsWith("/")) {
-                  path = `${this.baseUrl}${path}`;
-                } else {
-                  path = `${this.baseUrl}/${path}`;
-                }
+          galleryField.value.forEach(galleryImageField => {
+            let path = galleryImageField.path;
 
-                galleryImageField.value = path;
-                images[path] = null;
-              });
+            if (path == null) {
+              return;
             }
-          });
-      });
-    });
 
-    return images;
+            trimGalleryImageField(galleryImageField);
+
+            if (path.startsWith("/")) {
+              path = `${this.baseUrl}${path}`;
+            } else {
+              path = `${this.baseUrl}/${path}`;
+            }
+
+            galleryImageField.value = path;
+            existingImages[path] = null;
+          });
+        }
+      });
+
+    // Check the child items of the collection for any images
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemImages(child, existingImages);
+      })
+    }
   }
 
-  normalizeCollectionsAssets(collections) {
-    const assets = {};
+
+  normalizeCollectionsAssets(collections, existingAssets = {}) {
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        Object.keys(item)
-          .filter(fieldName => item[fieldName].type === "asset")
-          .forEach(fieldName => {
-            const assetField = item[fieldName];
-            let path = assetField.value.path;
-
-            trimAssetField(assetField);
-
-            path = `${this.baseUrl}/storage/uploads${path}`;
-
-            assetField.value = path;
-            assets[path] = null;
-          });
+        this.normalizeCollectionItemAssets(item, existingAssets);
       });
     });
 
-    return assets;
+    return existingAssets;
   }
 
-  normalizeCollectionsMarkdowns(collections, existingImages, existingAssets) {
-    const markdowns = {};
+  normalizeCollectionItemAssets(item, existingAssets) {
+    Object.keys(item)
+      .filter(fieldName => item[fieldName].type === "asset")
+      .forEach(fieldName => {
+        const assetField = item[fieldName];
+        let path = assetField.value.path;
 
+        trimAssetField(assetField);
+
+        path = `${this.baseUrl}/storage/uploads${path}`;
+
+        assetField.value = path;
+        existingAssets[path] = null;
+      });
+
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemAssets(child, existingAssets);
+      })
+    }
+  }
+
+  normalizeCollectionsMarkdowns(collections, existingImages, existingAssets, existingMarkdowns = {}) {
     collections.forEach(collection => {
       collection.items.forEach(item => {
-        Object.keys(item)
-          .filter(fieldName => item[fieldName].type === "markdown")
-          .forEach(fieldName => {
-            const markdownField = item[fieldName];
-
-            markdowns[markdownField.value] = null;
-            extractImagesFromMarkdown(markdownField.value, existingImages);
-            extractAssetsFromMarkdown(markdownField.value, existingAssets);
-          });
+        this.normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns);
       });
     });
 
-    return markdowns;
+    return existingMarkdowns;
+  }
+
+  normalizeCollectionItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns) {
+    Object.keys(item)
+      .filter(fieldName => item[fieldName].type === "markdown")
+      .forEach(fieldName => {
+        const markdownField = item[fieldName];
+        existingMarkdowns[markdownField.value] = null;
+        extractImagesFromMarkdown(markdownField.value, existingImages);
+        extractAssetsFromMarkdown(markdownField.value, existingAssets);
+      });
+
+    if (Array.isArray(item.children)) {
+      item.children.forEach(child => {
+        this.normalizeCollectionItemMarkdowns(child, existingImages, existingAssets, existingMarkdowns);
+      })
+    }
   }
 };
 
@@ -215,11 +242,13 @@ const trimGalleryImageField = galleryImageField => {
 const createCollectionItem = (
   collectionFields,
   collectionEntry,
-  locale = null
+  locale = null,
+  level = 1
 ) => {
   const item = {
     cockpitId: collectionEntry._id,
-    lang: locale == null ? "any" : locale
+    lang: locale == null ? "any" : locale,
+    level: level,
   };
 
   Object.keys(collectionFields).forEach(collectionFieldName => {
@@ -241,6 +270,12 @@ const createCollectionItem = (
       item[collectionFieldName] = itemField;
     }
   });
+
+  if (collectionEntry.hasOwnProperty('children')) {
+    item.children = collectionEntry.children.map((childEntry) => {
+      return createCollectionItem(collectionFields, childEntry, locale, level + 1);
+    });
+  }
 
   return item;
 };
