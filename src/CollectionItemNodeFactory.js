@@ -6,9 +6,12 @@ const {
 });
 
 module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName) {
+  constructor(createNode, collectionName, images, assets, markdowns) {
     this.createNode = createNode;
     this.collectionName = collectionName;
+    this.images = images;
+    this.assets = assets;
+    this.markdowns = markdowns;
   }
 
   create(collectionItem) {
@@ -20,9 +23,9 @@ module.exports = class CollectionItemNodeFactory {
             ? node.cockpitId
             : `${node.cockpitId}_${node.lang}`
         );
-        linkImageFieldsToImageNodes(node);
-        linkAssetFieldsToAssetNodes(node);
-        linkMarkdownFieldsToMarkdownNodes(node);
+        linkImageFieldsToImageNodes(node, this.images);
+        linkAssetFieldsToAssetNodes(node, this.assets);
+        linkMarkdownFieldsToMarkdownNodes(node, this.markdowns);
         linkCollectionLinkFieldsToCollectionItemNodes(node);
 
         return node;
@@ -31,22 +34,39 @@ module.exports = class CollectionItemNodeFactory {
   }
 };
 
-const linkImageFieldsToImageNodes = node => {
+const linkImageFieldsToImageNodes = (node, images) => {
   Object.keys(node).forEach(fieldName => {
     const field = node[fieldName];
+
     if (field.type === "image") {
-      field.value___NODE = generateNodeId("Image", field.value.cockpitId);
+      field.value___NODE = images[field.value].id;
+      delete field.value;
+    } else if (field.type === "gallery") {
+      field.value___NODE = field.value.map(
+        imageField => images[imageField.value].id
+      );
       delete field.value;
     }
   });
 };
 
-const linkAssetFieldsToAssetNodes = node => {
+const linkAssetFieldsToAssetNodes = (node, assets) => {
   Object.keys(node).forEach(fieldName => {
     const field = node[fieldName];
 
     if (field.type === "asset") {
-      field.value___NODE = generateNodeId("Asset", field.value.cockpitId);
+      field.value___NODE = assets[field.value].id;
+      delete field.value;
+    }
+  });
+};
+
+const linkMarkdownFieldsToMarkdownNodes = (node, markdowns) => {
+  Object.keys(node).forEach(fieldName => {
+    const field = node[fieldName];
+
+    if (field.type === "markdown") {
+      field.value___NODE = markdowns[field.value].id;
       delete field.value;
     }
   });
@@ -85,17 +105,6 @@ const linkCollectionLinkFieldsToCollectionItemNodes = node => {
         );
       }
 
-      delete field.value;
-    }
-  });
-};
-
-const linkMarkdownFieldsToMarkdownNodes = node => {
-  Object.keys(node).forEach(fieldName => {
-    const field = node[fieldName];
-
-    if (field.type === "markdown") {
-      field.value___NODE = generateNodeId("Markdown", field.value.cockpitId);
       delete field.value;
     }
   });

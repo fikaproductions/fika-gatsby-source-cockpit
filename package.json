@@ -1,7 +1,7 @@
 {
   "name": "@fika/gatsby-source-cockpit",
-  "version": "1.0.5",
-  "description": "This is a Gatsby version 2.*.* source plugin that feeds the GraphQL tree with Cockpit Headless CMS data. Actually, it supports querying raw texts, Markdown, images, assets, linked collections and internationalization.",
+  "version": "1.0.7",
+  "description": "This is a Gatsby version 2.x.x source plugin that feeds the GraphQL tree with Cockpit Headless CMS data. Actually, it supports querying raw texts (and any trivial field types), Markdown, images, gallery, assets, linked collections and internationalization.",
   "main": "gatsby-node.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,7 +12,8 @@
     "gatsby-source-plugin",
     "cockpit",
     "headless-cms",
-    "fika"
+    "fika",
+    "productions"
   ],
   "author": "Fika Productions <info@fikaproductions.com>",
   "license": "GPL-3.0-or-later",

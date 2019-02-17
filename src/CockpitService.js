@@ -1,6 +1,5 @@
 const mime = require("mime");
 const request = require("request-promise");
-const hash = require("string-hash");
 
 const {
   METHODS,
@@ -81,17 +80,21 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionsImages(collections) {
-    const images = [];
+    const images = {};
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
         Object.keys(item)
-          .filter(fieldName => item[fieldName].type === "image")
+          .filter(
+            fieldName =>
+              item[fieldName].type === "image" ||
+              item[fieldName].type === "gallery"
+          )
           .forEach(fieldName => {
-            const imageField = item[fieldName];
-            let path = imageField.value.path;
+            if (!Array.isArray(item[fieldName].value)) {
+              const imageField = item[fieldName];
+              let path = imageField.value.path;
 
-            if (path) {
               trimAssetField(imageField);
 
               if (path.startsWith("/")) {
@@ -100,9 +103,25 @@ module.exports = class CockpitService {
                 path = `${this.baseUrl}/${path}`;
               }
 
-              if (images.filter(image => image.path === path).length === 0) {
-                images.push({ path, id: imageField.value.cockpitId });
-              }
+              imageField.value = path;
+              images[path] = null;
+            } else {
+              const galleryField = item[fieldName];
+
+              galleryField.value.forEach(galleryImageField => {
+                let path = galleryImageField.path;
+
+                trimGalleryImageField(galleryImageField);
+
+                if (path.startsWith("/")) {
+                  path = `${this.baseUrl}${path}`;
+                } else {
+                  path = `${this.baseUrl}/${path}`;
+                }
+
+                galleryImageField.value = path;
+                images[path] = null;
+              });
             }
           });
       });
@@ -112,7 +131,7 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionsAssets(collections) {
-    const assets = [];
+    const assets = {};
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
@@ -122,15 +141,12 @@ module.exports = class CockpitService {
             const assetField = item[fieldName];
             let path = assetField.value.path;
 
-            if (path) {
-              trimAssetField(assetField);
+            trimAssetField(assetField);
 
-              path = `${this.baseUrl}/storage/uploads${path}`;
+            path = `${this.baseUrl}/storage/uploads${path}`;
 
-              if (assets.filter(asset => asset.path === path).length === 0) {
-                assets.push({ path, id: assetField.value.cockpitId });
-              }
-            }
+            assetField.value = path;
+            assets[path] = null;
           });
       });
     });
@@ -139,7 +155,7 @@ module.exports = class CockpitService {
   }
 
   normalizeCollectionsMarkdowns(collections, existingImages, existingAssets) {
-    const markdowns = [];
+    const markdowns = {};
 
     collections.forEach(collection => {
       collection.items.forEach(item => {
@@ -147,15 +163,10 @@ module.exports = class CockpitService {
           .filter(fieldName => item[fieldName].type === "markdown")
           .forEach(fieldName => {
             const markdownField = item[fieldName];
-            const id = hash(markdownField.value);
 
-            if (markdowns.filter(markdown => markdown.id === id).length === 0) {
-              markdowns.push({ raw: markdownField.value, id });
-              extractImagesFromMarkdown(markdownField.value, existingImages);
-              extractAssetsFromMarkdown(markdownField.value, existingAssets);
-            }
-
-            markdownField.value = { cockpitId: id };
+            markdowns[markdownField.value] = null;
+            extractImagesFromMarkdown(markdownField.value, existingImages);
+            extractAssetsFromMarkdown(markdownField.value, existingAssets);
           });
       });
     });
@@ -165,9 +176,6 @@ module.exports = class CockpitService {
 };
 
 const trimAssetField = assetField => {
-  assetField.value.cockpitId =
-    assetField.value._id || `${hash(assetField.value.path)}`;
-
   delete assetField.value._id;
   delete assetField.value.path;
   delete assetField.value.title;
@@ -184,11 +192,16 @@ const trimAssetField = assetField => {
   delete assetField.value._by;
 
   Object.keys(assetField.value).forEach(attribute => {
-    if (attribute !== "cockpitId") {
-      assetField[attribute] = assetField.value[attribute];
-      delete assetField.value[attribute];
-    }
+    assetField[attribute] = assetField.value[attribute];
+    delete assetField.value[attribute];
   });
+};
+
+const trimGalleryImageField = galleryImageField => {
+  galleryImageField.type = "image";
+
+  delete galleryImageField.meta.asset;
+  delete galleryImageField.path;
 };
 
 const createCollectionItem = (
@@ -231,13 +244,7 @@ const extractImagesFromMarkdown = (markdown, existingImages) => {
     unparsedMarkdown = unparsedMarkdown.substring(
       match.index + match[0].length
     );
-
-    if (existingImages.filter(image => image.path === match[1]).length === 0) {
-      existingImages.push({
-        path: match[1],
-        id: `${hash(match[1])}`
-      });
-    }
+    existingImages[match[1]] = null;
   }
 };
 
@@ -251,12 +258,8 @@ const extractAssetsFromMarkdown = (markdown, existingAssets) => {
     );
     const mediaType = mime.getType(match[1]);
 
-    if (
-      mediaType &&
-      mediaType !== "text/html" &&
-      existingAssets.filter(asset => asset.path === match[1]).length === 0
-    ) {
-      existingAssets.push({ path: match[1], id: `${hash(match[1])}` });
+    if (mediaType && mediaType !== "text/html") {
+      existingAssets[match[1]] = null;
     }
   }
 };
