@@ -16,10 +16,10 @@ const {
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
 
-module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName, images, assets, markdowns, layouts) {
+module.exports = class SingletonItemNodeFactory {
+  constructor(createNode, singletonName, images, assets, markdowns, layouts) {
     this.createNode = createNode
-    this.collectionName = collectionName
+    this.singletonName = singletonName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
@@ -28,17 +28,10 @@ module.exports = class CollectionItemNodeFactory {
     this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
 
-  create(collectionItem) {
-    const children = collectionItem.hasOwnProperty('children')
-      ? collectionItem.children.map(childItem => {
-          return this.create(childItem)
-        })
-      : []
-    delete collectionItem.children
-
-    const nodeFactory = createNodeFactory(this.collectionName, node => {
+  create(singletonItem) {
+    const nodeFactory = createNodeFactory(this.singletonName, node => {
       node.id = generateNodeId(
-        this.collectionName,
+        this.singletonName,
         node.lang === 'any' ? node.cockpitId : `${node.cockpitId}_${node.lang}`
       )
       linkImageFieldsToImageNodes(node, this.images)
@@ -47,24 +40,13 @@ module.exports = class CollectionItemNodeFactory {
       linkLayoutFieldsToLayoutNodes(node, this.layouts)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
       createObjectNodes(node, this.objectNodeFactory)
-      linkChildrenToParent(node, children)
 
       return node
     })
 
-    const node = nodeFactory(collectionItem)
+    const node = nodeFactory(singletonItem)
     this.createNode(node)
 
     return node
-  }
-}
-
-const linkChildrenToParent = (node, children) => {
-  if (Array.isArray(children) && children.length > 0) {
-    node.children___NODE = children.map(child => child.id)
-    children.forEach(child => {
-      child.parent___NODE = node.id
-    })
-    delete node.children
   }
 }
