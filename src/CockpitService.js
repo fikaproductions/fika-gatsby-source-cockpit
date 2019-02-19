@@ -11,11 +11,20 @@ const {
 const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 
 module.exports = class CockpitService {
-  constructor(baseUrl, token, locales, whiteListedCollectionNames = []) {
+  constructor(
+    baseUrl,
+    token,
+    locales,
+    whiteListedCollectionNames = [],
+    whiteListedSingletonNames = [],
+    aliases = {}
+  ) {
     this.baseUrl = baseUrl
     this.token = token
     this.locales = locales
     this.whiteListedCollectionNames = whiteListedCollectionNames
+    this.whiteListedSingletonNames = whiteListedSingletonNames
+    this.aliases = aliases
   }
 
   async fetch(endpoint, method, lang = null) {
@@ -50,36 +59,83 @@ module.exports = class CockpitService {
     return this.fetch('/collections/listCollections', METHODS.GET)
   }
 
-  async getCollection(name) {
-    const { fields: collectionFields, entries } = await this.fetch(
-      `/collections/get/${name}`,
-      METHODS.GET
-    )
+  async getSingletonNames() {
+    return this.fetch('/singletons/listSingletons', METHODS.GET)
+  }
 
-    const items = entries.map(entry =>
-      createCollectionItem(name, collectionFields, entry)
+  async getCollection(name) {
+    const {
+      fields: collectionFields,
+      entries: collectionEntries,
+    } = await this.fetch(`/collections/get/${name}`, METHODS.GET)
+
+    const collectionItems = collectionEntries.map(collectionEntry =>
+      createCollectionItem(name, collectionFields, collectionEntry)
     )
 
     for (let index = 0; index < this.locales.length; index++) {
-      const { fields: collectionFields, entries } = await this.fetch(
+      const {
+        fields: collectionFields,
+        entries: collectionEntries,
+      } = await this.fetch(
         `/collections/get/${name}`,
         METHODS.GET,
         this.locales[index]
       )
 
-      items.push(
-        ...entries.map(entry =>
+      collectionItems.push(
+        ...collectionEntries.map(collectionEntry =>
           createCollectionItem(
             name,
             collectionFields,
-            entry,
+            collectionEntry,
             this.locales[index]
           )
         )
       )
     }
 
-    return { items, name }
+    const officialName =
+      (this.aliases['collection'] && this.aliases['collection'][name]) || name
+
+    return { items: collectionItems, name: officialName }
+  }
+
+  async getSingleton(name) {
+    const singletonEntry = await this.fetch(
+      `/singletons/get/${name}`,
+      METHODS.GET
+    )
+
+    const singletonDescriptor = await this.fetch(
+      `/singletons/singleton/${name}`,
+      METHODS.GET
+    )
+
+    const singletonItems = [
+      createSingletonItem(singletonDescriptor, singletonEntry),
+    ]
+
+    for (let index = 0; index < this.locales.length; index++) {
+      const singletonEntry = await this.fetch(
+        `/singletons/get/${name}`,
+        METHODS.GET,
+        this.locales[index]
+      )
+
+      singletonItems.push(
+        createSingletonItem(
+          singletonDescriptor,
+          singletonEntry,
+          this.locales[index]
+        )
+      )
+    }
+
+    const officialName =
+      (this.aliases['singleton'] && this.aliases['singleton'][name]) || name
+
+    return { items: singletonItems, name: officialName }
   }
 
   async getCollections() {
@@ -99,23 +155,40 @@ module.exports = class CockpitService {
     )
   }
 
-  normalizeResources(collections) {
+  async getSingletons() {
+    const names = await this.getSingletonNames()
+    const whiteListedNames = this.whiteListedSingletonNames
+
+    return Promise.all(
+      names
+        .filter(
+          name =>
+            whiteListedNames === null ||
+            (Array.isArray(whiteListedNames) &&
+              whiteListedNames.length === 0) ||
+            whiteListedNames.includes(name)
+        )
+        .map(name => this.getSingleton(name))
+    )
+  }
+
+  normalizeResources(nodes) {
     const existingImages = {}
     const existingAssets = {}
     const existingMarkdowns = {}
     const existingLayouts = {}
 
-    collections.forEach(collection => {
-      collection.items.forEach(item => {
-        this.normalizeCollectionItemImages(item, existingImages)
-        this.normalizeCollectionItemAssets(item, existingAssets)
-        this.normalizeCollectionItemMarkdowns(
+    nodes.forEach(node => {
+      node.items.forEach(item => {
+        this.normalizeNodeItemImages(item, existingImages)
+        this.normalizeNodeItemAssets(item, existingAssets)
+        this.normalizeNodeItemMarkdowns(
           item,
           existingImages,
           existingAssets,
           existingMarkdowns
         )
-        this.normalizeCollectionItemLayouts(
+        this.normalizeNodeItemLayouts(
           item,
           existingImages,
           existingAssets,
@@ -133,7 +206,7 @@ module.exports = class CockpitService {
     }
   }
 
-  normalizeCollectionItemImages(item, existingImages) {
+  normalizeNodeItemImages(item, existingImages) {
     getFieldsOfTypes(item, ['image', 'gallery']).forEach(field => {
       if (!Array.isArray(field.value)) {
         const imageField = field
@@ -175,15 +248,14 @@ module.exports = class CockpitService {
       }
     })
 
-    // Check the child items of the collection for any images
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemImages(child, existingImages)
+        this.normalizeNodeItemImages(child, existingImages)
       })
     }
   }
 
-  normalizeCollectionItemAssets(item, existingAssets) {
+  normalizeNodeItemAssets(item, existingAssets) {
     getFieldsOfTypes(item, ['asset']).forEach(assetField => {
       let path = assetField.value.path
 
@@ -197,12 +269,12 @@ module.exports = class CockpitService {
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemAssets(child, existingAssets)
+        this.normalizeNodeItemAssets(child, existingAssets)
       })
     }
   }
 
-  normalizeCollectionItemMarkdowns(
+  normalizeNodeItemMarkdowns(
     item,
     existingImages,
     existingAssets,
@@ -216,7 +288,7 @@ module.exports = class CockpitService {
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemMarkdowns(
+        this.normalizeNodeItemMarkdowns(
           child,
           existingImages,
           existingAssets,
@@ -226,7 +298,7 @@ module.exports = class CockpitService {
     }
   }
 
-  normalizeCollectionItemLayouts(
+  normalizeNodeItemLayouts(
     item,
     existingImages,
     existingAssets,
@@ -244,7 +316,7 @@ module.exports = class CockpitService {
 
     if (Array.isArray(item.children)) {
       item.children.forEach(child => {
-        this.normalizeCollectionItemLayouts(
+        this.normalizeNodeItemLayouts(
           child,
           existingImages,
           existingAssets,
@@ -306,7 +378,8 @@ const createCollectionItem = (
   Object.keys(collectionFields).reduce((accumulator, collectionFieldName) => {
     const collectionFieldValue = collectionEntry[collectionFieldName]
     const collectionFieldConfiguration = collectionFields[collectionFieldName]
-    const field = createCollectionField(
+    const field = createNodeField(
+      'collection',
       collectionName,
       collectionFieldValue,
       collectionFieldConfiguration
@@ -333,37 +406,75 @@ const createCollectionItem = (
   return item
 }
 
-const createCollectionField = (
-  collectionName,
-  collectionFieldValue,
-  collectionFieldConfiguration
+const createSingletonItem = (
+  singletonDescriptor,
+  singletonEntry,
+  locale = null
 ) => {
-  const collectionFieldType = collectionFieldConfiguration.type
+  const item = {
+    cockpitId: singletonDescriptor._id,
+    cockpitCreated: new Date(singletonDescriptor._created * 1000),
+    cockpitModified: new Date(singletonDescriptor._modified * 1000),
+    // TODO: Replace with Users... once implemented (GitHub Issue #15)
+    cockpitBy: singletonEntry._by,
+    cockpitModifiedBy: singletonEntry._mby,
+    lang: locale == null ? 'any' : locale,
+  }
+
+  singletonDescriptor.fields.reduce(
+    (accumulator, singletonFieldConfiguration) => {
+      const singletonFieldValue =
+        singletonEntry[singletonFieldConfiguration.name]
+      const field = createNodeField(
+        'singleton',
+        singletonDescriptor.name,
+        singletonFieldValue,
+        singletonFieldConfiguration
+      )
+
+      if (field !== null) {
+        accumulator[singletonFieldConfiguration.name] = field
+      }
+
+      return accumulator
+    },
+    item
+  )
+
+  return item
+}
+
+const createNodeField = (
+  nodeType,
+  nodeName,
+  nodeFieldValue,
+  nodeFieldConfiguration
+) => {
+  const nodeFieldType = nodeFieldConfiguration.type
 
   if (
-    !(
-      Array.isArray(collectionFieldValue) && collectionFieldValue.length === 0
-    ) &&
-    collectionFieldValue != null &&
-    collectionFieldValue !== ''
+    !(Array.isArray(nodeFieldValue) && nodeFieldValue.length === 0) &&
+    nodeFieldValue != null &&
+    nodeFieldValue !== ''
   ) {
     const itemField = {
-      type: collectionFieldType,
+      type: nodeFieldType,
     }
 
-    if (collectionFieldType === 'repeater') {
-      const repeaterFieldOptions = collectionFieldConfiguration.options || {}
+    if (nodeFieldType === 'repeater') {
+      const repeaterFieldOptions = nodeFieldConfiguration.options || {}
 
       if (typeof repeaterFieldOptions.field !== 'undefined') {
-        itemField.value = collectionFieldValue.map(repeaterEntry =>
-          createCollectionField(
-            collectionName,
+        itemField.value = nodeFieldValue.map(repeaterEntry =>
+          createNodeField(
+            nodeType,
+            nodeName,
             repeaterEntry.value,
             repeaterFieldOptions.field
           )
         )
       } else if (typeof repeaterFieldOptions.fields !== 'undefined') {
-        itemField.value = collectionFieldValue.map(repeaterEntry =>
+        itemField.value = nodeFieldValue.map(repeaterEntry =>
           repeaterFieldOptions.fields.reduce(
             (accumulator, currentFieldConfiguration) => {
               if (
@@ -375,7 +486,7 @@ const createCollectionField = (
                   { lower: true }
                 )
                 console.warn(
-                  `\nRepeater field without 'name' attribute used in collection '${collectionName}'. ` +
+                  `\nRepeater field without 'name' attribute used in ${nodeType} '${nodeName}'. ` +
                     `Using value '${generatedNameProperty}' for name (generated from the label).`
                 )
                 currentFieldConfiguration.name = generatedNameProperty
@@ -386,8 +497,9 @@ const createCollectionField = (
                 accumulator.valueType = currentFieldConfiguration.name
                 accumulator.value[
                   currentFieldConfiguration.name
-                ] = createCollectionField(
-                  collectionName,
+                ] = createNodeField(
+                  nodeType,
+                  nodeName,
                   repeaterEntry.value,
                   currentFieldConfiguration
                 )
@@ -399,15 +511,16 @@ const createCollectionField = (
           )
         )
       }
-    } else if (collectionFieldType === 'set') {
-      const setFieldOptions = collectionFieldConfiguration.options || {}
+    } else if (nodeFieldType === 'set') {
+      const setFieldOptions = nodeFieldConfiguration.options || {}
 
       itemField.value = setFieldOptions.fields.reduce(
         (accumulator, currentFieldConfiguration) => {
           const currentFieldName = currentFieldConfiguration.name
-          accumulator[currentFieldName] = createCollectionField(
-            collectionName,
-            collectionFieldValue[currentFieldName],
+          accumulator[currentFieldName] = createNodeField(
+            nodeType,
+            nodeName,
+            nodeFieldValue[currentFieldName],
             currentFieldConfiguration
           )
 
@@ -416,7 +529,7 @@ const createCollectionField = (
         {}
       )
     } else {
-      itemField.value = collectionFieldValue
+      itemField.value = nodeFieldValue
     }
 
     return itemField

@@ -1,6 +1,6 @@
 # @fika/gatsby-source-cockpit
 
-This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections data.
+This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections and singletons data.
 
 Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, layout(-grid)s (currently only without nested images/assets), objects, linked collections and internationalization.
 
@@ -46,7 +46,18 @@ plugins: [
         'YOUR_COCKPIT_API_BASE_URL', // (1)
       locales: ['EVERY_LANGUAGE_KEYS_DEFINED_IN_YOUR_COCKPIT_CONFIGURATION'], // (2)
       collections: [], // (3)
-      brokenImageReplacement: null (4)
+      singletons: [], // (4)
+      aliases: {
+        collection: {
+          A_COLLECTION_NAME: 'AN_ALIAS',
+          …
+        },
+        singleton: {
+          A_SINGLETON_NAME: 'AN_ALIAS',
+          …
+        }
+      }, // (5)
+      brokenImageReplacement: 'AN_URL_TO_AN_IMAGE', // (6)
     },
   },
 ]
@@ -57,13 +68,16 @@ Notes:
 1. E.g. `'http://localhost:8080'`.
 2. E.g. `['en', 'fr']`.
 3. The specific Cockpit collections you want to fetch. If empty or null all collections will be fetched. E.g. `['Products', 'Menu']`
-4. Replacement for broken image links. If null the detected broken images will be removed. If an URL to an image the broken image will be replaced with this image.
+4. Same as the `collections` parameter, but for the Cockpit singletons.
+5. You can specify aliases for any Cockpit collection or singleton. Since it's not possible to have two GraphQL types with the same name in a schema, you can use this configuration to alias for instance a collection and a singleton sharing the same name (or with a difference of capitalization in the first character).  
+   E.g. (for a singleton and a collection both named 'Team') `{ collection: { Team: 'Teams' } }`.
+6. Replacement for broken image links. If `null`, the detected broken images will be removed. If an URL to an image, the broken image will be replaced with this image.
 
 Adding the `gatsby-source-filesystem` dependency to your project grants access to the `publicURL` field resolver attribute on the file nodes that this plugin generates by extending the GraphQL type of the file nodes. So, as you can guess, the path specified in the plugin options could be anything, we do not need it to load any local files, we are just taking advantage of its extension of the file node type.
 
 ## How to query
 
-Collections are converted into nodes. You can access many collection entries at once with this syntax:
+Collections and singletons are converted into nodes. You can access many collection entries at once with this syntax:
 
 (The collection is named 'team' or 'Team' in Cockpit.)
 
@@ -94,14 +108,14 @@ Notes:
 3. You can get the original Cockpit element's id (aka the `_id`), creation and modification dates and authors' (ids for now) that way.
 4. You can access descendant collection entries within that field if you have hierarchically structured your collection entries in Cockpit (_Custom sortable entries_ turned on).
 
-Or you can access one entry at the time that way:
+Or you can access one entry at the time or a singleton that way:
 
 (The collection is named 'definition' or 'Definition' in Cockpit.)
 
 ```
 query($locale: String) { // (1)
     cockpitDefinition(cockpitId: { eq: "5bc78a3679ef0740297b4u04" }, lang: { eq: $locale }) { // (2)
-        Header {
+        header {
             type
             value
         }
@@ -113,6 +127,19 @@ Notes:
 
 1. Using `query` with a name or not is optional in GraphQL. However, if you want to use variables from your page context, it is mandatory.
 2. You can get the appropriate language by filtering on the `lang` attribute.
+
+(The singleton is named 'vegetable' or 'Vegetable' in Cockpit.)
+
+```
+{
+  cockpitVegetable(lang: { eq: "en" }) {
+    category {
+      type
+      value
+    }
+  }
+}
+```
 
 ### Special types of Cockpit fields
 
@@ -154,7 +181,7 @@ Notes:
 
 #### Images and galleries
 
-Image and gallery fields nested within a collection will be downloaded and will get one or more file(s) node(s) attached under the `value` attribute like this:
+Image and gallery fields nested within a collection or singleton will be downloaded and will get one or more file(s) node(s) attached under the `value` attribute like this:
 
 (You can then access the child(ren) node(s) a plugin like `gatsby-transformer-sharp` would create.)
 
@@ -185,13 +212,13 @@ Notes:
 
 #### Assets
 
-Just like image fields, asset fields nested within a collection will be downloaded and will get a file node attached under the `value` attribute.
+Just like image fields, asset fields nested within a collection or singleton will be downloaded and will get a file node attached under the `value` attribute.
 
 You can access the file regardless of its type (document, video, etc.) using the `publicURL` field resolver attribute on the file node.
 
 #### Markdowns
 
-Markdown fields nested within a collection will get a custom Markdown node attached under the `value` attribute. It mimics a file node — even if there is no existing Markdown file — in order to allow plugins like `gatsby-transformer-remark` to process them. Moreover, images and assets embedded into the Markdown are downloaded and their paths are updated accordingly. Example:
+Markdown fields nested within a collection or singleton will get a custom Markdown node attached under the `value` attribute. It mimics a file node — even if there is no existing Markdown file — in order to allow plugins like `gatsby-transformer-remark` to process them. Moreover, images and assets embedded into the Markdown are downloaded and their paths are updated accordingly. Example:
 
 (You can then access the child node a plugin like `gatsby-transformer-remark` would create.)
 
@@ -274,7 +301,7 @@ For the first case the values can be queried almost like a normal scalar field. 
   }
 ```
 
-The second case is a bit more complicated - in order to not cause any GraphQL Schema conflicts each array value must be of the same type. To achieve this the `gatsby-source-cockpit` plugin implicitely wraps the values in a set field, generating one field in the set for each `fields` option supplied in the repeater configuration.
+The second case is a bit more complicated - in order to not cause any GraphQL Schema conflicts each array value must be of the same type. To achieve this the `gatsby-source-cockpit` plugin implicitly wraps the values in a set field, generating one field in the set for each `fields` option supplied in the repeater configuration.
 
 E.g. assuming the repeater field is configured with these options:
 
@@ -319,7 +346,7 @@ then the following query is necessary to get the data:
   }
 ```
 
-**Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitely specify the `name` value.
+**Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitly specify the `name` value.
 
 #### Layouts and layout-grids
 

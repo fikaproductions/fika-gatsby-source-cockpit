@@ -3,6 +3,7 @@ const path = require('path')
 
 const CockpitService = require('./src/CockpitService')
 const CollectionItemNodeFactory = require('./src/CollectionItemNodeFactory')
+const SingletonItemNodeFactory = require('./src/SingletonItemNodeFactory')
 const {
   MARKDOWN_IMAGE_REGEXP_GLOBAL,
   MARKDOWN_ASSET_REGEXP_GLOBAL,
@@ -22,7 +23,9 @@ exports.sourceNodes = async (
     configOptions.baseUrl,
     configOptions.token,
     configOptions.locales,
-    configOptions.collections
+    configOptions.collections,
+    configOptions.singletons,
+    configOptions.aliases
   )
   const fileNodeFactory = new FileNodeFactory(
     createNode,
@@ -37,15 +40,19 @@ exports.sourceNodes = async (
   await cockpit.validateToken()
 
   const collections = await cockpit.getCollections()
+  const singletons = await cockpit.getSingletons()
+  validateNodeNames(collections, singletons)
+
+  const nodes = [...collections, ...singletons]
   const { images, assets, markdowns, layouts } = cockpit.normalizeResources(
-    collections
+    nodes
   )
 
-  cache.set(TYPE_PREFIX_COCKPIT, collections)
+  cache.set(TYPE_PREFIX_COCKPIT, nodes)
 
   const brokenImageReplacement = await createBrokenImagePlaceholder(
     fileNodeFactory,
-    configOptions
+    configOptions.brokenImageReplacement
   )
 
   for (let path in images) {
@@ -97,6 +104,21 @@ exports.sourceNodes = async (
       nodeFactory.create(item)
     })
   })
+
+  singletons.forEach(singleton => {
+    const nodeFactory = new SingletonItemNodeFactory(
+      createNode,
+      singleton.name,
+      images,
+      assets,
+      markdowns,
+      layouts
+    )
+
+    singleton.items.forEach(item => {
+      nodeFactory.create(item)
+    })
+  })
 }
 
 const copyFileToStaticFolder = ({ absolutePath, name, ext, internal }) => {
@@ -125,8 +147,11 @@ const updateAssetPathsWithLocalPaths = (markdown, assets) => {
   )
 }
 
-const createBrokenImagePlaceholder = async (fileNodeFactory, configOptions) => {
-  const brokenImageReplacementURL = configOptions.brokenImageReplacement || null
+const createBrokenImagePlaceholder = async (
+  fileNodeFactory,
+  placeholderURL
+) => {
+  const brokenImageReplacementURL = placeholderURL || null
   if (brokenImageReplacementURL) {
     const brokenImageReplacementNode = await fileNodeFactory.createImageNode(
       brokenImageReplacementURL
@@ -140,4 +165,67 @@ const createBrokenImagePlaceholder = async (fileNodeFactory, configOptions) => {
     }
   }
   return null
+}
+
+const validateNodeNames = (collections, singletons) => {
+  const collisions = Object.values(
+    collections
+      .map(collection => ({
+        type: 'collection',
+        name: collection.name,
+      }))
+      .concat(
+        singletons.map(singleton => ({
+          type: 'singleton',
+          name: singleton.name,
+        }))
+      )
+      .reduce((accumulator, node) => {
+        const key = node.name[0].toUpperCase() + node.name.substring(1)
+
+        if (accumulator[key]) {
+          accumulator[key].push(node)
+        } else {
+          accumulator[key] = [node]
+        }
+
+        return accumulator
+      }, {})
+  )
+    .filter(association => association.length > 1)
+    .map(association =>
+      association.reduce(
+        (accumulator, node) =>
+          accumulator +
+          (accumulator !== '' ? ' & ' : '') +
+          `${node.name} (${node.type})`,
+        ''
+      )
+    )
+
+  if (collisions.length > 0) {
+    throw new Error(
+      `Some collections or singletons names are colliding,
+       you must provide aliases for some of them in the plugin's configuration.` +
+        '\n' +
+        `An example for a collection and a singleton both named "team" would be:
+        options: {
+          …
+          aliases: {
+            singleton: {
+              team: 'Team', // 'team' would be valid too
+            },
+            collection: {
+              team: 'Teams', // 'teams' would be valid too
+            }
+          }
+        }` +
+        '\n' +
+        'The colliding names are:\n' +
+        collisions.reduce(
+          (accumulator, collision) => accumulator + '- ' + collision + '\n',
+          ''
+        )
+    )
+  }
 }
