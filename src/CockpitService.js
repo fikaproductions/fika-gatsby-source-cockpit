@@ -165,7 +165,7 @@ module.exports = class CockpitService {
 
           if (path.startsWith('/')) {
             path = `${this.baseUrl}${path}`
-          } else {
+          } else if (!path.startsWith('http')) {
             path = `${this.baseUrl}/${path}`
           }
 
