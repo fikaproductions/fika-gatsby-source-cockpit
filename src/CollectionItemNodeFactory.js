@@ -55,15 +55,21 @@ module.exports = class CollectionItemNodeFactory {
 
 const linkImageFieldsToImageNodes = (node, images) => {
   getFieldsOfTypes(node, ['image']).forEach(field => {
-    field.value___NODE = images[field.value].id
-    delete field.value
+    if (images[field.value] !== null) {
+      field.value___NODE = images[field.value].id
+      delete field.value
+    } else {
+      field.value = null
+    }
   })
 
   getFieldsOfTypes(node, ['gallery']).forEach(field => {
     if (Array.isArray(field.value)) {
-      field.value___NODE = field.value.map(
-        imageField => images[imageField.value].id
-      )
+      field.value___NODE = field.value
+        .map(imageField =>
+          images[imageField.value] !== null ? images[imageField.value].id : null
+        )
+        .filter(imageId => imageId != null)
     }
     delete field.value
   })
@@ -71,8 +77,12 @@ const linkImageFieldsToImageNodes = (node, images) => {
 
 const linkAssetFieldsToAssetNodes = (node, assets) => {
   getFieldsOfTypes(node, ['asset']).forEach(field => {
-    field.value___NODE = assets[field.value].id
-    delete field.value
+    if (assets[field.value]) {
+      field.value___NODE = assets[field.value].id
+      delete field.value
+    } else {
+      field.value = null
+    }
   })
 }
 

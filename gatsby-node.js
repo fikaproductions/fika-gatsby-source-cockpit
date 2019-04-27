@@ -13,7 +13,10 @@ const MarkdownNodeFactory = require('./src/MarkdownNodeFactory')
 const LayoutNodeFactory = require('./src/LayoutNodeFactory')
 
 exports.setFieldsOnGraphQLNodeType = require('./extend-node-type')
-exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
+exports.sourceNodes = async (
+  { actions, reporter, cache, store },
+  configOptions
+) => {
   const { createNode } = actions
   const cockpit = new CockpitService(
     configOptions.baseUrl,
@@ -21,7 +24,12 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
     configOptions.locales,
     configOptions.collections
   )
-  const fileNodeFactory = new FileNodeFactory(createNode, store, cache)
+  const fileNodeFactory = new FileNodeFactory(
+    createNode,
+    store,
+    cache,
+    reporter
+  )
   const markdownNodeFactory = new MarkdownNodeFactory(createNode)
   const layoutNodeFactory = new LayoutNodeFactory(createNode)
 
@@ -35,11 +43,21 @@ exports.sourceNodes = async ({ actions, cache, store }, configOptions) => {
 
   cache.set(TYPE_PREFIX_COCKPIT, collections)
 
+  const brokenImageReplacement = await createBrokenImagePlaceholder(
+    fileNodeFactory,
+    configOptions
+  )
+
   for (let path in images) {
     const imageNode = await fileNodeFactory.createImageNode(path)
-    images[path] = {
-      localPath: copyFileToStaticFolder(imageNode),
-      id: imageNode.id,
+    if (imageNode) {
+      images[path] = {
+        localPath: copyFileToStaticFolder(imageNode),
+        id: imageNode.id,
+      }
+    } else if (brokenImageReplacement) {
+      reporter.info('Using broken image replacement for missing image', path)
+      images[path] = brokenImageReplacement
     }
   }
 
@@ -105,4 +123,21 @@ const updateAssetPathsWithLocalPaths = (markdown, assets) => {
       ? match[0].replace(match[1], assets[match[1]].localPath)
       : match[0]
   )
+}
+
+const createBrokenImagePlaceholder = async (fileNodeFactory, configOptions) => {
+  const brokenImageReplacementURL = configOptions.brokenImageReplacement || null
+  if (brokenImageReplacementURL) {
+    const brokenImageReplacementNode = await fileNodeFactory.createImageNode(
+      brokenImageReplacementURL
+    )
+    if (brokenImageReplacementNode) {
+      const localPath = copyFileToStaticFolder(brokenImageReplacementNode)
+      return {
+        localPath: localPath,
+        id: brokenImageReplacementNode.id,
+      }
+    }
+  }
+  return null
 }
