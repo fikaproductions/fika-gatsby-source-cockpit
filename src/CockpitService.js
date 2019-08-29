@@ -2,6 +2,7 @@ const mime = require('mime')
 const request = require('request-promise')
 const slugify = require('slugify')
 const hash = require('string-hash')
+const { parse } = require('node-html-parser')
 
 const {
   METHODS,
@@ -181,6 +182,7 @@ module.exports = class CockpitService {
     nodes.forEach(node => {
       node.items.forEach(item => {
         this.normalizeNodeItemImages(item, existingImages)
+        this.normalizeNodeItemWysiwygs(item, existingImages)
         this.normalizeNodeItemAssets(item, existingAssets)
         this.normalizeNodeItemMarkdowns(
           item,
@@ -241,7 +243,6 @@ module.exports = class CockpitService {
           } else if (!path.startsWith('http')) {
             path = `${this.baseUrl}/${path}`
           }
-
           galleryImageField.value = path
           existingImages[path] = null
         })
@@ -258,7 +259,6 @@ module.exports = class CockpitService {
   normalizeNodeItemAssets(item, existingAssets) {
     getFieldsOfTypes(item, ['asset']).forEach(assetField => {
       let path = assetField.value.path
-
       trimAssetField(assetField)
 
       path = `${this.baseUrl}/storage/uploads${path}`
@@ -272,6 +272,26 @@ module.exports = class CockpitService {
         this.normalizeNodeItemAssets(child, existingAssets)
       })
     }
+  }
+
+  normalizeNodeItemWysiwygs(item, existingImages) {
+    getFieldsOfTypes(item, ['wysiwyg']).forEach(field => {
+      let imgTags = parse(field.value).querySelectorAll('img')
+      let path
+      for (let tag of imgTags) {
+        if (
+          existingImages[path] != null ||
+          existingImages[path] === undefined
+        ) {
+          if (tag.attributes.src.startsWith('/')) {
+            path = `${this.baseUrl}${tag.attributes.src}`
+          } else {
+            path = `${this.baseUrl}/${tag.attributes.src}`
+          }
+        }
+        existingImages[path] = null
+      }
+    })
   }
 
   normalizeNodeItemMarkdowns(

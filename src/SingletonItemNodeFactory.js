@@ -17,13 +17,22 @@ const {
 })
 
 module.exports = class SingletonItemNodeFactory {
-  constructor(createNode, singletonName, images, assets, markdowns, layouts) {
+  constructor(
+    createNode,
+    singletonName,
+    images,
+    assets,
+    markdowns,
+    layouts,
+    baseUrl
+  ) {
     this.createNode = createNode
     this.singletonName = singletonName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
     this.layouts = layouts
+    this.baseUrl = baseUrl
 
     this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
@@ -34,7 +43,7 @@ module.exports = class SingletonItemNodeFactory {
         this.singletonName,
         node.lang === 'any' ? node.cockpitId : `${node.cockpitId}_${node.lang}`
       )
-      linkImageFieldsToImageNodes(node, this.images)
+      linkImageFieldsToImageNodes(node, this.images, this.baseUrl)
       linkAssetFieldsToAssetNodes(node, this.assets)
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
       linkLayoutFieldsToLayoutNodes(node, this.layouts)

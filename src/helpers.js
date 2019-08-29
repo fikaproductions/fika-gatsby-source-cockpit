@@ -1,4 +1,5 @@
 const { TYPE_PREFIX_COCKPIT } = require('./constants')
+const { parse } = require('node-html-parser')
 const hash = require('string-hash')
 const { generateNodeId } = require('gatsby-node-helpers').default({
   typePrefix: TYPE_PREFIX_COCKPIT,
@@ -32,7 +33,7 @@ function getFieldsOfTypes(item, types) {
   return fieldsOfTypes
 }
 
-function linkImageFieldsToImageNodes(node, images) {
+function linkImageFieldsToImageNodes(node, images, baseUrl) {
   getFieldsOfTypes(node, ['image']).forEach(field => {
     if (images[field.value] !== null) {
       field.value___NODE = images[field.value].id
@@ -52,6 +53,25 @@ function linkImageFieldsToImageNodes(node, images) {
     }
     delete field.value
   })
+
+  getFieldsOfTypes(node, ['wysiwyg']).forEach(field => {
+    const imageSources = getImageSourcesFromHtml(field.value)
+
+    imageSources.forEach(imageSource => {
+      if (!imageSource.startsWith('http')) {
+        field.value = field.value.replace(
+          imageSource,
+          images[baseUrl + imageSource].localPath
+        )
+      }
+    })
+  })
+}
+
+function getImageSourcesFromHtml(html) {
+  return parse(html)
+    .querySelectorAll('img')
+    .map(imgTag => imgTag.attributes.src)
 }
 
 function linkAssetFieldsToAssetNodes(node, assets) {
