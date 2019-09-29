@@ -17,8 +17,17 @@ const {
 })
 
 module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName, images, assets, markdowns, layouts) {
+  constructor(
+    createNode,
+    createParentChildLink,
+    collectionName,
+    images,
+    assets,
+    markdowns,
+    layouts
+  ) {
     this.createNode = createNode
+    this.createParentChildLink = createParentChildLink
     this.collectionName = collectionName
     this.images = images
     this.assets = assets
@@ -47,24 +56,22 @@ module.exports = class CollectionItemNodeFactory {
       linkLayoutFieldsToLayoutNodes(node, this.layouts)
       linkCollectionLinkFieldsToCollectionItemNodes(node)
       createObjectNodes(node, this.objectNodeFactory)
-      linkChildrenToParent(node, children)
 
       return node
     })
 
     const node = nodeFactory(collectionItem)
     this.createNode(node)
+    linkChildrenToParent(node, children, this.createParentChildLink)
 
     return node
   }
 }
 
-const linkChildrenToParent = (node, children) => {
+const linkChildrenToParent = (node, children, createParentChildLink) => {
   if (Array.isArray(children) && children.length > 0) {
-    node.children___NODE = children.map(child => child.id)
     children.forEach(child => {
-      child.parent___NODE = node.id
+      createParentChildLink({ parent: node, child })
     })
-    delete node.children
   }
 }
