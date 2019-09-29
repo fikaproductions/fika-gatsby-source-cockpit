@@ -18,7 +18,7 @@ exports.sourceNodes = async (
   { actions, reporter, cache, store },
   configOptions
 ) => {
-  const { createNode } = actions
+  const { createNode, createParentChildLink } = actions
   const cockpit = new CockpitService(
     configOptions.baseUrl,
     configOptions.token,
@@ -93,6 +93,7 @@ exports.sourceNodes = async (
   collections.forEach(collection => {
     const nodeFactory = new CollectionItemNodeFactory(
       createNode,
+      createParentChildLink,
       collection.name,
       images,
       assets,

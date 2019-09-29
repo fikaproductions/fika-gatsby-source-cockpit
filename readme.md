@@ -119,7 +119,7 @@ Collections and singletons are converted into nodes. You can access many collect
         TeamMember1
         TeamMember2
         TeamMember3
-        children // (4)
+        childrenCockpitTeam { ... } // (4)
       }
     }
   }
