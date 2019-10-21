@@ -25,6 +25,31 @@ npm install --save gatsby-source-filesystem gatsby react
 5. Create a pull request on the main project by going [here](https://github.com/fikaproductions/fika-gatsby-source-cockpit/compare), click on "compare across forks" and select your own branch in the "head fork" section.
 6. Compare changes and submit pull request.
 
+### Tips and tricks
+
+While developing a GatsbyJS source plugin, it is useful to have a GatsbyJS project on the side in order to test it. To use the local plugin in your project instead of the one on NPM, you can run:
+
+```
+// In the plugin's folder
+npm link
+
+// In the GatsbyJS project's folder
+npm link @fika/gatsby-source-cockpit
+```
+
+You'll have to install the plugin's peer dependencies in the plugin's folder as well (without saving them):
+
+```
+npm install --no-save gatsby react
+```
+
+Then, in order to unlink the local plugin and use the one from NPM again:
+
+```
+npm uninstall --no-save @fika/gatsby-source-cockpit
+npm install
+```
+
 ## How to use
 
 Add this to your project `gatsby-config.js` file:
@@ -142,6 +167,24 @@ Notes:
 ```
 
 ### Special types of Cockpit fields
+
+#### Texts
+
+Text fields with the option `{ "slug": true }` can access the slug that way:
+
+```
+{
+  allCockpitBlogPost {
+    edges {
+      node {
+        title {
+          slug
+        }
+      }
+    }
+  }
+}
+```
 
 #### Collection-Links
 
