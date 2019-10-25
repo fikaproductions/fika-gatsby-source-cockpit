@@ -1,24 +1,25 @@
-const { TYPE_PREFIX_COCKPIT } = require('./constants')
+import gatsbyNodeHelpers from 'gatsby-node-helpers'
+import hash from 'string-hash'
 
-const {
-  createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
+import { TYPE_PREFIX_COCKPIT } from './constants'
+
+const { createNodeFactory, generateNodeId } = gatsbyNodeHelpers({
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
-const hash = require('string-hash')
 
-module.exports = class ObjectNodeFactory {
-  constructor(createNode) {
+export default class {
+  private createNode: any
+
+  constructor(createNode: any) {
     this.createNode = createNode
   }
 
-  create(object) {
+  public create(object: any) {
     const stringifiedObject = JSON.stringify(object)
     const partialId = `${hash(stringifiedObject)}`
 
     this.createNode(
-      createNodeFactory('ObjectNode', node => {
+      createNodeFactory('ObjectNode', (node: any) => {
         node.internal.mediaType = 'application/json'
         node.internal.content = stringifiedObject
         delete node.cockpitId

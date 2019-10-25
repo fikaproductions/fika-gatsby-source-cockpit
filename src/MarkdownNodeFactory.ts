@@ -1,23 +1,24 @@
-const { TYPE_PREFIX_COCKPIT } = require('./constants')
+import gatsbyNodeHelpers from 'gatsby-node-helpers'
+import hash from 'string-hash'
 
-const {
-  createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
+import { TYPE_PREFIX_COCKPIT } from './constants'
+
+const { createNodeFactory, generateNodeId } = gatsbyNodeHelpers({
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
-const hash = require('string-hash')
 
-module.exports = class MarkdownNodeFactory {
-  constructor(createNode) {
+export default class {
+  private createNode: any
+
+  constructor(createNode: any) {
     this.createNode = createNode
   }
 
-  create(markdown) {
+  public create(markdown: any) {
     const partialId = `${hash(markdown)}`
 
     this.createNode(
-      createNodeFactory('Markdown', node => {
+      createNodeFactory('Markdown', (node: any) => {
         node.internal.mediaType = 'text/markdown'
         node.internal.content = markdown
         delete node.cockpitId

@@ -1,22 +1,23 @@
-const { GraphQLJSON } = require('gatsby/graphql')
-const sanitizeHtml = require('sanitize-html')
-const styler = require('react-styling')
-const HtmlToReactParser = require('html-to-react').Parser
-const htmlToReactParser = new HtmlToReactParser()
+import { GraphQLJSON } from 'gatsby/graphql'
+import { Parser } from 'html-to-react'
+import styler from 'react-styling'
+import sanitizeHtml from 'sanitize-html'
 
-const { TYPE_PREFIX_COCKPIT } = require('./src/constants')
+import { TYPE_PREFIX_COCKPIT } from './src/constants'
 
-module.exports = async ({ type }) => {
+const htmlToReactParser = new Parser()
+
+export default async ({ type }: { type: any }) => {
   if (!type.name.startsWith(TYPE_PREFIX_COCKPIT)) {
     return {}
   }
 
-  const parseLayout = layout => {
+  const parseLayout = (layout: any) => {
     if (layout == null || layout.length === 0) {
       return layout
     }
 
-    return layout.map(node => {
+    return layout.map((node: any) => {
       if (node.settings) {
         node = parseSettings(node)
       }
@@ -31,7 +32,7 @@ module.exports = async ({ type }) => {
       return node
     })
   }
-  const parseHtml = (type, node) => {
+  const parseHtml = (type: string, node: any) => {
     const { settings } = node
     if (settings[type] === '') {
       node.settings.html = null
@@ -43,7 +44,7 @@ module.exports = async ({ type }) => {
     return node
   }
 
-  const parseSettings = node => {
+  const parseSettings = (node: any) => {
     const { settings } = node
     if (settings.html) {
       node = parseHtml('html', node)
@@ -68,19 +69,19 @@ module.exports = async ({ type }) => {
     return node
   }
 
-  let nodeExtendType = {}
+  const nodeExtendType: any = {}
 
   if (type.name === 'CockpitLayoutNode') {
-    nodeExtendType['parsed'] = {
+    nodeExtendType.parsed = {
       type: GraphQLJSON,
-      resolve(Item) {
+      resolve(Item: any) {
         return parseLayout(JSON.parse(Item.internal.content))
       },
     }
   } else if (type.name === 'CockpitObjectNode') {
-    nodeExtendType['data'] = {
+    nodeExtendType.data = {
       type: GraphQLJSON,
-      resolve(Item) {
+      resolve(Item: any) {
         return JSON.parse(Item.internal.content)
       },
     }

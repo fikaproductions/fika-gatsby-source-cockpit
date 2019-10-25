@@ -1,42 +1,48 @@
-const { TYPE_PREFIX_COCKPIT } = require('./constants')
-const ObjectNodeFactory = require('./ObjectNodeFactory')
-const {
-  linkImageFieldsToImageNodes,
-  linkAssetFieldsToAssetNodes,
-  linkMarkdownFieldsToMarkdownNodes,
-  linkLayoutFieldsToLayoutNodes,
-  linkCollectionLinkFieldsToCollectionItemNodes,
-  createObjectNodes,
-} = require('./helpers.js')
+import gatsbyNodeHelpers from 'gatsby-node-helpers'
 
-const {
-  createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
+import { TYPE_PREFIX_COCKPIT } from './constants'
+import {
+  createObjectNodes,
+  linkAssetFieldsToAssetNodes,
+  linkCollectionLinkFieldsToCollectionItemNodes,
+  linkImageFieldsToImageNodes,
+  linkLayoutFieldsToLayoutNodes,
+  linkMarkdownFieldsToMarkdownNodes,
+} from './helpers.js'
+import ObjectNodeFactory from './ObjectNodeFactory'
+
+const { createNodeFactory, generateNodeId } = gatsbyNodeHelpers({
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
 
-module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName, images, assets, markdowns, layouts) {
+export default class {
+  private createNode: any
+  private collectionName: string
+  private images: any
+  private assets: any
+  private markdowns: any
+  private layouts: any
+  private objectNodeFactory: ObjectNodeFactory
+
+  constructor(createNode: any, collectionName: string, images: any, assets: any, markdowns: any, layouts: any) {
     this.createNode = createNode
     this.collectionName = collectionName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
     this.layouts = layouts
-
     this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
 
-  create(collectionItem) {
+  public create(collectionItem: any) {
     const children = collectionItem.hasOwnProperty('children')
-      ? collectionItem.children.map(childItem => {
+      ? collectionItem.children.map((childItem: any) => {
           return this.create(childItem)
         })
       : []
     delete collectionItem.children
 
-    const nodeFactory = createNodeFactory(this.collectionName, node => {
+    const nodeFactory = createNodeFactory(this.collectionName, (node: any) => {
       node.id = generateNodeId(
         this.collectionName,
         node.lang === 'any' ? node.cockpitId : `${node.cockpitId}_${node.lang}`
@@ -59,7 +65,7 @@ module.exports = class CollectionItemNodeFactory {
   }
 }
 
-const linkChildrenToParent = (node, children) => {
+const linkChildrenToParent = (node: any, children: any) => {
   if (Array.isArray(children) && children.length > 0) {
     node.children___NODE = children.map(child => child.id)
     children.forEach(child => {

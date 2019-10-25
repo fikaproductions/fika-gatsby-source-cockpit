@@ -1,24 +1,25 @@
-const { TYPE_PREFIX_COCKPIT } = require('./constants')
+import gatsbyNodeHelpers from 'gatsby-node-helpers'
+import hash from 'string-hash'
 
-const {
-  createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
+import { TYPE_PREFIX_COCKPIT } from './constants'
+
+const { createNodeFactory, generateNodeId } = gatsbyNodeHelpers({
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
-const hash = require('string-hash')
 
-module.exports = class LayoutNodeFactory {
-  constructor(createNode) {
+export default class {
+  private createNode: any
+
+  constructor(createNode: any) {
     this.createNode = createNode
   }
 
-  create(layout) {
+  public create(layout: any) {
     const stringifiedLayout = JSON.stringify(layout)
     const partialId = `${hash(stringifiedLayout)}`
 
     this.createNode(
-      createNodeFactory('LayoutNode', node => {
+      createNodeFactory('LayoutNode', (node: any) => {
         node.internal.mediaType = 'application/json'
         node.internal.content = stringifiedLayout
         delete node.cockpitId

@@ -1,35 +1,41 @@
-const { TYPE_PREFIX_COCKPIT } = require('./constants')
-const ObjectNodeFactory = require('./ObjectNodeFactory')
-const {
-  linkImageFieldsToImageNodes,
-  linkAssetFieldsToAssetNodes,
-  linkMarkdownFieldsToMarkdownNodes,
-  linkLayoutFieldsToLayoutNodes,
-  linkCollectionLinkFieldsToCollectionItemNodes,
-  createObjectNodes,
-} = require('./helpers.js')
+import gatsbyNodeHelpers from 'gatsby-node-helpers'
 
-const {
-  createNodeFactory,
-  generateNodeId,
-} = require('gatsby-node-helpers').default({
+import { TYPE_PREFIX_COCKPIT } from './constants'
+import {
+  createObjectNodes,
+  linkAssetFieldsToAssetNodes,
+  linkCollectionLinkFieldsToCollectionItemNodes,
+  linkImageFieldsToImageNodes,
+  linkLayoutFieldsToLayoutNodes,
+  linkMarkdownFieldsToMarkdownNodes,
+} from './helpers.js'
+import ObjectNodeFactory from './ObjectNodeFactory'
+
+const { createNodeFactory, generateNodeId } = gatsbyNodeHelpers({
   typePrefix: TYPE_PREFIX_COCKPIT,
 })
 
-module.exports = class SingletonItemNodeFactory {
-  constructor(createNode, singletonName, images, assets, markdowns, layouts) {
+export default class {
+  private createNode: any
+  private singletonName: string
+  private images: any
+  private assets: any
+  private markdowns: any
+  private layouts: any
+  private objectNodeFactory: ObjectNodeFactory
+
+  constructor(createNode: any, singletonName: string, images: any, assets: any, markdowns: any, layouts: any) {
     this.createNode = createNode
     this.singletonName = singletonName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
     this.layouts = layouts
-
     this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
 
-  create(singletonItem) {
-    const nodeFactory = createNodeFactory(this.singletonName, node => {
+  public create(singletonItem: any) {
+    const nodeFactory = createNodeFactory(this.singletonName, (node: any) => {
       node.id = generateNodeId(
         this.singletonName,
         node.lang === 'any' ? node.cockpitId : `${node.cockpitId}_${node.lang}`

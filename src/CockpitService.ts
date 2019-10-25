@@ -1,23 +1,31 @@
-const mime = require('mime')
-const request = require('request-promise')
-const slugify = require('slugify')
-const hash = require('string-hash')
+import { getType } from 'mime'
+import request from 'request-promise'
+import slugify from 'slugify'
+import hash from 'string-hash'
 
-const {
-  METHODS,
-  MARKDOWN_IMAGE_REGEXP,
-  MARKDOWN_ASSET_REGEXP,
-} = require('./constants')
-const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
+import { MARKDOWN_ASSET_REGEXP, MARKDOWN_IMAGE_REGEXP, METHODS } from './constants'
+import { getFieldsOfTypes } from './helpers.js'
 
-module.exports = class CockpitService {
+interface Aliases {
+  collection: { [name: string]: string }
+  singleton: { [name: string]: string }
+}
+
+export default class CockpitService {
+  private baseUrl: string
+  private token: string
+  private locales: string[]
+  private whiteListedCollectionNames: string[]
+  private whiteListedSingletonNames: string[]
+  private aliases: Aliases
+
   constructor(
-    baseUrl,
-    token,
-    locales,
-    whiteListedCollectionNames = [],
-    whiteListedSingletonNames = [],
-    aliases = {}
+    baseUrl: string,
+    token: string,
+    locales: string[],
+    whiteListedCollectionNames: string[] = [],
+    whiteListedSingletonNames: string[] = [],
+    aliases: Aliases = { collection: {}, singleton: {} }
   ) {
     this.baseUrl = baseUrl
     this.token = token
@@ -27,27 +35,15 @@ module.exports = class CockpitService {
     this.aliases = aliases
   }
 
-  async fetch(endpoint, method, lang = null) {
-    return request({
-      uri: `${this.baseUrl}/api${endpoint}?token=${this.token}${
-        lang ? `&lang=${lang}` : ''
-      }`,
-      method,
-      json: true,
-    })
-  }
-
-  async validateBaseUrl() {
+  public async validateBaseUrl() {
     try {
       await this.fetch('', METHODS.GET)
     } catch (error) {
-      throw new Error(
-        'BaseUrl config parameter is invalid or there is no internet connection'
-      )
+      throw new Error('BaseUrl config parameter is invalid or there is no internet connection')
     }
   }
 
-  async validateToken() {
+  public async validateToken() {
     try {
       await this.fetch('/collections/listCollections', METHODS.GET)
     } catch (error) {
@@ -55,158 +51,124 @@ module.exports = class CockpitService {
     }
   }
 
-  async getCollectionNames() {
-    return this.fetch('/collections/listCollections', METHODS.GET)
-  }
-
-  async getSingletonNames() {
-    return this.fetch('/singletons/listSingletons', METHODS.GET)
-  }
-
-  async getCollection(name) {
-    const {
-      fields: collectionFields,
-      entries: collectionEntries,
-    } = await this.fetch(`/collections/get/${name}`, METHODS.GET)
-
-    const collectionItems = collectionEntries.map(collectionEntry =>
-      createCollectionItem(name, collectionFields, collectionEntry)
-    )
-
-    for (let index = 0; index < this.locales.length; index++) {
-      const {
-        fields: collectionFields,
-        entries: collectionEntries,
-      } = await this.fetch(
-        `/collections/get/${name}`,
-        METHODS.GET,
-        this.locales[index]
-      )
-
-      collectionItems.push(
-        ...collectionEntries.map(collectionEntry =>
-          createCollectionItem(
-            name,
-            collectionFields,
-            collectionEntry,
-            this.locales[index]
-          )
-        )
-      )
-    }
-
-    const officialName =
-      (this.aliases['collection'] && this.aliases['collection'][name]) || name
-
-    return { items: collectionItems, name: officialName }
-  }
-
-  async getSingleton(name) {
-    const singletonEntry = await this.fetch(
-      `/singletons/get/${name}`,
-      METHODS.GET
-    )
-
-    const singletonDescriptor = await this.fetch(
-      `/singletons/singleton/${name}`,
-      METHODS.GET
-    )
-
-    const singletonItems = [
-      createSingletonItem(singletonDescriptor, singletonEntry),
-    ]
-
-    for (let index = 0; index < this.locales.length; index++) {
-      const singletonEntry = await this.fetch(
-        `/singletons/get/${name}`,
-        METHODS.GET,
-        this.locales[index]
-      )
-
-      singletonItems.push(
-        createSingletonItem(
-          singletonDescriptor,
-          singletonEntry,
-          this.locales[index]
-        )
-      )
-    }
-
-    const officialName =
-      (this.aliases['singleton'] && this.aliases['singleton'][name]) || name
-
-    return { items: singletonItems, name: officialName }
-  }
-
-  async getCollections() {
+  public async getCollections() {
     const names = await this.getCollectionNames()
     const whiteListedNames = this.whiteListedCollectionNames
 
     return Promise.all(
       names
         .filter(
-          name =>
+          (name: string) =>
             whiteListedNames === null ||
-            (Array.isArray(whiteListedNames) &&
-              whiteListedNames.length === 0) ||
+            (Array.isArray(whiteListedNames) && whiteListedNames.length === 0) ||
             whiteListedNames.includes(name)
         )
-        .map(name => this.getCollection(name))
+        .map((name: string) => this.getCollection(name))
     )
   }
 
-  async getSingletons() {
+  public async getSingletons() {
     const names = await this.getSingletonNames()
     const whiteListedNames = this.whiteListedSingletonNames
 
     return Promise.all(
       names
         .filter(
-          name =>
+          (name: string) =>
             whiteListedNames === null ||
-            (Array.isArray(whiteListedNames) &&
-              whiteListedNames.length === 0) ||
+            (Array.isArray(whiteListedNames) && whiteListedNames.length === 0) ||
             whiteListedNames.includes(name)
         )
-        .map(name => this.getSingleton(name))
+        .map((name: string) => this.getSingleton(name))
     )
   }
 
-  normalizeResources(nodes) {
-    const existingImages = {}
-    const existingAssets = {}
-    const existingMarkdowns = {}
-    const existingLayouts = {}
+  public normalizeResources(nodes: any) {
+    const existingImages: { [keys: string]: any } = {}
+    const existingAssets: { [keys: string]: any } = {}
+    const existingMarkdowns: { [keys: string]: any } = {}
+    const existingLayouts: { [keys: string]: any } = {}
 
-    nodes.forEach(node => {
-      node.items.forEach(item => {
+    nodes.forEach((node: any) => {
+      node.items.forEach((item: any) => {
         this.normalizeNodeItemImages(item, existingImages)
         this.normalizeNodeItemAssets(item, existingAssets)
-        this.normalizeNodeItemMarkdowns(
-          item,
-          existingImages,
-          existingAssets,
-          existingMarkdowns
-        )
-        this.normalizeNodeItemLayouts(
-          item,
-          existingImages,
-          existingAssets,
-          existingMarkdowns,
-          existingLayouts
-        )
+        this.normalizeNodeItemMarkdowns(item, existingImages, existingAssets, existingMarkdowns)
+        this.normalizeNodeItemLayouts(item, existingImages, existingAssets, existingMarkdowns, existingLayouts)
       })
     })
 
     return {
-      images: existingImages,
       assets: existingAssets,
-      markdowns: existingMarkdowns,
+      images: existingImages,
       layouts: existingLayouts,
+      markdowns: existingMarkdowns,
     }
   }
 
-  normalizeNodeItemImages(item, existingImages) {
+  private async getCollectionNames() {
+    return this.fetch('/collections/listCollections', METHODS.GET)
+  }
+
+  private async getSingletonNames() {
+    return this.fetch('/singletons/listSingletons', METHODS.GET)
+  }
+
+  private async getCollection(name: string) {
+    const { fields: collectionFields, entries: collectionEntries } = await this.fetch(
+      `/collections/get/${name}`,
+      METHODS.GET
+    )
+
+    const collectionItems = collectionEntries.map((collectionEntry: any) =>
+      createCollectionItem(name, collectionFields, collectionEntry)
+    )
+
+    for (const locale of this.locales) {
+      const { fields: collectionFields, entries: collectionEntries } = await this.fetch(
+        `/collections/get/${name}`,
+        METHODS.GET,
+        locale
+      )
+
+      collectionItems.push(
+        ...collectionEntries.map((collectionEntry: any) =>
+          createCollectionItem(name, collectionFields, collectionEntry, locale)
+        )
+      )
+    }
+
+    const officialName = this.aliases.collection[name] || name
+
+    return { items: collectionItems, name: officialName }
+  }
+
+  private async getSingleton(name: string) {
+    const singletonEntry = await this.fetch(`/singletons/get/${name}`, METHODS.GET)
+
+    const singletonDescriptor = await this.fetch(`/singletons/singleton/${name}`, METHODS.GET)
+
+    const singletonItems = [createSingletonItem(singletonDescriptor, singletonEntry)]
+
+    for (const locale of this.locales) {
+      const singletonEntry = await this.fetch(`/singletons/get/${name}`, METHODS.GET, locale)
+
+      singletonItems.push(createSingletonItem(singletonDescriptor, singletonEntry, locale))
+    }
+
+    const officialName = this.aliases.singleton[name] || name
+
+    return { items: singletonItems, name: officialName }
+  }
+  private async fetch(endpoint: string, method: string, lang?: string) {
+    return request({
+      json: true,
+      method,
+      uri: `${this.baseUrl}/api${endpoint}?token=${this.token}${lang ? `&lang=${lang}` : ''}`,
+    })
+  }
+
+  private normalizeNodeItemImages(item: any, existingImages: any) {
     getFieldsOfTypes(item, ['image', 'gallery']).forEach(field => {
       if (!Array.isArray(field.value)) {
         const imageField = field
@@ -227,7 +189,7 @@ module.exports = class CockpitService {
       } else {
         const galleryField = field
 
-        galleryField.value.forEach(galleryImageField => {
+        galleryField.value.forEach((galleryImageField: any) => {
           let path = galleryImageField.path
 
           if (path == null) {
@@ -249,13 +211,13 @@ module.exports = class CockpitService {
     })
 
     if (Array.isArray(item.children)) {
-      item.children.forEach(child => {
+      item.children.forEach((child: any) => {
         this.normalizeNodeItemImages(child, existingImages)
       })
     }
   }
 
-  normalizeNodeItemAssets(item, existingAssets) {
+  private normalizeNodeItemAssets(item: any, existingAssets: any) {
     getFieldsOfTypes(item, ['asset']).forEach(assetField => {
       let path = assetField.value.path
 
@@ -268,18 +230,13 @@ module.exports = class CockpitService {
     })
 
     if (Array.isArray(item.children)) {
-      item.children.forEach(child => {
+      item.children.forEach((child: any) => {
         this.normalizeNodeItemAssets(child, existingAssets)
       })
     }
   }
 
-  normalizeNodeItemMarkdowns(
-    item,
-    existingImages,
-    existingAssets,
-    existingMarkdowns
-  ) {
+  private normalizeNodeItemMarkdowns(item: any, existingImages: any, existingAssets: any, existingMarkdowns: any) {
     getFieldsOfTypes(item, ['markdown']).forEach(markdownField => {
       existingMarkdowns[markdownField.value] = null
       extractImagesFromMarkdown(markdownField.value, existingImages)
@@ -287,23 +244,18 @@ module.exports = class CockpitService {
     })
 
     if (Array.isArray(item.children)) {
-      item.children.forEach(child => {
-        this.normalizeNodeItemMarkdowns(
-          child,
-          existingImages,
-          existingAssets,
-          existingMarkdowns
-        )
+      item.children.forEach((child: any) => {
+        this.normalizeNodeItemMarkdowns(child, existingImages, existingAssets, existingMarkdowns)
       })
     }
   }
 
-  normalizeNodeItemLayouts(
-    item,
-    existingImages,
-    existingAssets,
-    existingMarkdowns,
-    existingLayouts
+  private normalizeNodeItemLayouts(
+    item: any,
+    existingImages: any,
+    existingAssets: any,
+    existingMarkdowns: any,
+    existingLayouts: any
   ) {
     getFieldsOfTypes(item, ['layout', 'layout-grid']).forEach(layoutField => {
       const stringifiedLayout = JSON.stringify(layoutField.value)
@@ -315,20 +267,14 @@ module.exports = class CockpitService {
     })
 
     if (Array.isArray(item.children)) {
-      item.children.forEach(child => {
-        this.normalizeNodeItemLayouts(
-          child,
-          existingImages,
-          existingAssets,
-          existingMarkdowns,
-          existingLayouts
-        )
+      item.children.forEach((child: any) => {
+        this.normalizeNodeItemLayouts(child, existingImages, existingAssets, existingMarkdowns, existingLayouts)
       })
     }
   }
 }
 
-const trimAssetField = assetField => {
+const trimAssetField = (assetField: any) => {
   delete assetField.value._id
   delete assetField.value.path
   delete assetField.value.title
@@ -350,7 +296,7 @@ const trimAssetField = assetField => {
   })
 }
 
-const trimGalleryImageField = galleryImageField => {
+const trimGalleryImageField = (galleryImageField: any) => {
   galleryImageField.type = 'image'
 
   delete galleryImageField.meta.asset
@@ -358,24 +304,23 @@ const trimGalleryImageField = galleryImageField => {
 }
 
 const createCollectionItem = (
-  collectionName,
-  collectionFields,
-  collectionEntry,
-  locale = null,
-  level = 1
+  collectionName: string,
+  collectionFields: any,
+  collectionEntry: any,
+  locale: string | null = null,
+  level: number = 1
 ) => {
-  const item = {
-    cockpitId: collectionEntry._id,
+  const item: any = {
+    cockpitBy: collectionEntry._by, // TODO: Replace with Users... once implemented (GitHub Issue #15)
     cockpitCreated: new Date(collectionEntry._created * 1000),
+    cockpitId: collectionEntry._id,
     cockpitModified: new Date(collectionEntry._modified * 1000),
-    // TODO: Replace with Users... once implemented (GitHub Issue #15)
-    cockpitBy: collectionEntry._by,
     cockpitModifiedBy: collectionEntry._mby,
     lang: locale == null ? 'any' : locale,
-    level: level,
+    level,
   }
 
-  Object.keys(collectionFields).reduce((accumulator, collectionFieldName) => {
+  Object.keys(collectionFields).reduce((accumulator: any, collectionFieldName: string) => {
     const collectionFieldValue = collectionEntry[collectionFieldName]
     const collectionFieldConfiguration = collectionFields[collectionFieldName]
     const collectionFieldSlug = collectionEntry[`${collectionFieldName}_slug`]
@@ -395,66 +340,51 @@ const createCollectionItem = (
   }, item)
 
   if (collectionEntry.hasOwnProperty('children')) {
-    item.children = collectionEntry.children.map(childEntry => {
-      return createCollectionItem(
-        collectionFields,
-        childEntry,
-        locale,
-        level + 1
-      )
+    item.children = collectionEntry.children.map((childEntry: any) => {
+      return createCollectionItem(collectionName, collectionFields, childEntry, locale, level + 1)
     })
   }
 
   return item
 }
 
-const createSingletonItem = (
-  singletonDescriptor,
-  singletonEntry,
-  locale = null
-) => {
+const createSingletonItem = (singletonDescriptor: any, singletonEntry: any, locale: string | null = null) => {
   const item = {
-    cockpitId: singletonDescriptor._id,
+    cockpitBy: singletonEntry._by, // TODO: Replace with Users... once implemented (GitHub Issue #15)
     cockpitCreated: new Date(singletonDescriptor._created * 1000),
+    cockpitId: singletonDescriptor._id,
     cockpitModified: new Date(singletonDescriptor._modified * 1000),
-    // TODO: Replace with Users... once implemented (GitHub Issue #15)
-    cockpitBy: singletonEntry._by,
     cockpitModifiedBy: singletonEntry._mby,
     lang: locale == null ? 'any' : locale,
   }
 
-  singletonDescriptor.fields.reduce(
-    (accumulator, singletonFieldConfiguration) => {
-      const singletonFieldValue =
-        singletonEntry[singletonFieldConfiguration.name]
-      const singletonFieldSlug =
-        singletonEntry[`${singletonFieldConfiguration.name}_slug`]
-      const field = createNodeField(
-        'singleton',
-        singletonDescriptor.name,
-        singletonFieldValue,
-        singletonFieldConfiguration,
-        singletonFieldSlug
-      )
+  singletonDescriptor.fields.reduce((accumulator: any, singletonFieldConfiguration: any) => {
+    const singletonFieldValue = singletonEntry[singletonFieldConfiguration.name]
+    const singletonFieldSlug = singletonEntry[`${singletonFieldConfiguration.name}_slug`]
+    const field = createNodeField(
+      'singleton',
+      singletonDescriptor.name,
+      singletonFieldValue,
+      singletonFieldConfiguration,
+      singletonFieldSlug
+    )
 
-      if (field !== null) {
-        accumulator[singletonFieldConfiguration.name] = field
-      }
+    if (field !== null) {
+      accumulator[singletonFieldConfiguration.name] = field
+    }
 
-      return accumulator
-    },
-    item
-  )
+    return accumulator
+  }, item)
 
   return item
 }
 
 const createNodeField = (
-  nodeType,
-  nodeName,
-  nodeFieldValue,
-  nodeFieldConfiguration,
-  nodeFieldSlug
+  nodeType: string,
+  nodeName: string,
+  nodeFieldValue: any,
+  nodeFieldConfiguration: any,
+  nodeFieldSlug?: string
 ) => {
   const nodeFieldType = nodeFieldConfiguration.type
 
@@ -463,7 +393,7 @@ const createNodeField = (
     nodeFieldValue != null &&
     nodeFieldValue !== ''
   ) {
-    const itemField = {
+    const itemField: any = {
       type: nodeFieldType,
     }
 
@@ -471,26 +401,18 @@ const createNodeField = (
       const repeaterFieldOptions = nodeFieldConfiguration.options || {}
 
       if (typeof repeaterFieldOptions.field !== 'undefined') {
-        itemField.value = nodeFieldValue.map(repeaterEntry =>
-          createNodeField(
-            nodeType,
-            nodeName,
-            repeaterEntry.value,
-            repeaterFieldOptions.field
-          )
+        itemField.value = nodeFieldValue.map((repeaterEntry: any) =>
+          createNodeField(nodeType, nodeName, repeaterEntry.value, repeaterFieldOptions.field)
         )
       } else if (typeof repeaterFieldOptions.fields !== 'undefined') {
-        itemField.value = nodeFieldValue.map(repeaterEntry =>
+        itemField.value = nodeFieldValue.map((repeaterEntry: any) =>
           repeaterFieldOptions.fields.reduce(
-            (accumulator, currentFieldConfiguration) => {
+            (accumulator: any, currentFieldConfiguration: any) => {
               if (
                 typeof currentFieldConfiguration.name === 'undefined' &&
                 currentFieldConfiguration.label === repeaterEntry.field.label
               ) {
-                const generatedNameProperty = slugify(
-                  currentFieldConfiguration.label,
-                  { lower: true }
-                )
+                const generatedNameProperty = slugify(currentFieldConfiguration.label, { lower: true })
                 console.warn(
                   `\nRepeater field without 'name' attribute used in ${nodeType} '${nodeName}'. ` +
                     `Using value '${generatedNameProperty}' for name (generated from the label).`
@@ -501,9 +423,7 @@ const createNodeField = (
 
               if (currentFieldConfiguration.name === repeaterEntry.field.name) {
                 accumulator.valueType = currentFieldConfiguration.name
-                accumulator.value[
-                  currentFieldConfiguration.name
-                ] = createNodeField(
+                accumulator.value[currentFieldConfiguration.name] = createNodeField(
                   nodeType,
                   nodeName,
                   repeaterEntry.value,
@@ -520,20 +440,17 @@ const createNodeField = (
     } else if (nodeFieldType === 'set') {
       const setFieldOptions = nodeFieldConfiguration.options || {}
 
-      itemField.value = setFieldOptions.fields.reduce(
-        (accumulator, currentFieldConfiguration) => {
-          const currentFieldName = currentFieldConfiguration.name
-          accumulator[currentFieldName] = createNodeField(
-            nodeType,
-            nodeName,
-            nodeFieldValue[currentFieldName],
-            currentFieldConfiguration
-          )
+      itemField.value = setFieldOptions.fields.reduce((accumulator: any, currentFieldConfiguration: any) => {
+        const currentFieldName = currentFieldConfiguration.name
+        accumulator[currentFieldName] = createNodeField(
+          nodeType,
+          nodeName,
+          nodeFieldValue[currentFieldName],
+          currentFieldConfiguration
+        )
 
-          return accumulator
-        },
-        {}
-      )
+        return accumulator
+      }, {})
     } else {
       itemField.value = nodeFieldValue
 
@@ -547,7 +464,7 @@ const createNodeField = (
   return null
 }
 
-const extractImagesFromMarkdown = (markdown, existingImages) => {
+const extractImagesFromMarkdown = (markdown: any, existingImages: any) => {
   let unparsedMarkdown = markdown
   let match
 
@@ -557,13 +474,13 @@ const extractImagesFromMarkdown = (markdown, existingImages) => {
   }
 }
 
-const extractAssetsFromMarkdown = (markdown, existingAssets) => {
+const extractAssetsFromMarkdown = (markdown: any, existingAssets: any) => {
   let unparsedMarkdown = markdown
   let match
 
   while ((match = MARKDOWN_ASSET_REGEXP.exec(unparsedMarkdown))) {
     unparsedMarkdown = unparsedMarkdown.substring(match.index + match[0].length)
-    const mediaType = mime.getType(match[1])
+    const mediaType = getType(match[1])
 
     if (mediaType && mediaType !== 'text/html') {
       existingAssets[match[1]] = null

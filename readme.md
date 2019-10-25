@@ -82,7 +82,7 @@ plugins: [
           …
         }
       }, // (5)
-      brokenImageReplacement: 'AN_URL_TO_AN_IMAGE', // (6)
+      brokenImageReplacementUrl: 'AN_URL_TO_AN_IMAGE', // (6)
     },
   },
 ]
@@ -389,7 +389,7 @@ then the following query is necessary to get the data:
   }
 ```
 
-**Note:** For this to work the fields specified in the `field` option need to have a `name` attribute which is not required by Cockpit itself. If the name attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitly specify the `name` value.
+**Note:** For this to work, the fields specified in the `field(s)` option need to have a `name` attribute which is not required by Cockpit itself. If the `name` attribute is not set, the plugin will print a warning to the console and generate a `name` value out of the value of the `label` attribute but it is recommended to explicitly specify the `name` value.
 
 #### Layouts and layout-grids
 

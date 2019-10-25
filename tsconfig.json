@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": "./build",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["src", "types", "extend-node-type.ts", "gatsby-node.ts"],
+  "exclude": ["node_modules"]
+}
