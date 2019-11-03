@@ -17,13 +17,22 @@ const {
 })
 
 module.exports = class CollectionItemNodeFactory {
-  constructor(createNode, collectionName, images, assets, markdowns, layouts) {
+  constructor(
+    createNode,
+    collectionName,
+    images,
+    assets,
+    markdowns,
+    layouts,
+    baseUrl
+  ) {
     this.createNode = createNode
     this.collectionName = collectionName
     this.images = images
     this.assets = assets
     this.markdowns = markdowns
     this.layouts = layouts
+    this.baseUrl = baseUrl
 
     this.objectNodeFactory = new ObjectNodeFactory(createNode)
   }
@@ -41,7 +50,7 @@ module.exports = class CollectionItemNodeFactory {
         this.collectionName,
         node.lang === 'any' ? node.cockpitId : `${node.cockpitId}_${node.lang}`
       )
-      linkImageFieldsToImageNodes(node, this.images)
+      linkImageFieldsToImageNodes(node, this.images, this.baseUrl)
       linkAssetFieldsToAssetNodes(node, this.assets)
       linkMarkdownFieldsToMarkdownNodes(node, this.markdowns)
       linkLayoutFieldsToLayoutNodes(node, this.layouts)

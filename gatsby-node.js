@@ -97,7 +97,8 @@ exports.sourceNodes = async (
       images,
       assets,
       markdowns,
-      layouts
+      layouts,
+      configOptions.baseUrl
     )
 
     collection.items.forEach(item => {
@@ -112,7 +113,8 @@ exports.sourceNodes = async (
       images,
       assets,
       markdowns,
-      layouts
+      layouts,
+      configOptions.baseUrl
     )
 
     singleton.items.forEach(item => {

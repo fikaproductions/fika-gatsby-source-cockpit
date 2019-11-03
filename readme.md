@@ -2,7 +2,7 @@
 
 This is a Gatsby version 2.\*.\* source plugin that feeds the GraphQL tree with Cockpit Headless CMS collections and singletons data.
 
-Actually, it supports querying raw texts (and any trivial field types), Markdown, images, galleries, assets, sets, repeaters, layout(-grid)s (currently only without nested images/assets), objects, linked collections and internationalization.
+Actually, it supports querying raw texts (and any trivial field types), Markdown, Wysiwyg, images, galleries, assets, sets, repeaters, layout(-grid)s (currently only without nested images/assets), objects, linked collections and internationalization.
 
 ## Installation
 
@@ -289,6 +289,10 @@ Markdown fields nested within a collection or singleton will get a custom Markdo
 Notes:
 
 1. You can access the raw Markdown with this attribute.
+
+#### Wysiwygs
+
+Wysiwyg fields (or `What you see is what you get`) works the same way as Markdown fields, but instead of accessing an HTML equivalent through the `value → childMarkdownRemark → html` attribute, it's accessible straight through the `value` attribute.
 
 #### Sets
 
