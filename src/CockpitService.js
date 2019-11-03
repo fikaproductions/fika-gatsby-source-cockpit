@@ -398,11 +398,13 @@ const createCollectionItem = (
   Object.keys(collectionFields).reduce((accumulator, collectionFieldName) => {
     const collectionFieldValue = collectionEntry[collectionFieldName]
     const collectionFieldConfiguration = collectionFields[collectionFieldName]
+    const collectionFieldSlug = collectionEntry[`${collectionFieldName}_slug`]
     const field = createNodeField(
       'collection',
       collectionName,
       collectionFieldValue,
-      collectionFieldConfiguration
+      collectionFieldConfiguration,
+      collectionFieldSlug
     )
 
     if (field !== null) {
@@ -445,11 +447,14 @@ const createSingletonItem = (
     (accumulator, singletonFieldConfiguration) => {
       const singletonFieldValue =
         singletonEntry[singletonFieldConfiguration.name]
+      const singletonFieldSlug =
+        singletonEntry[`${singletonFieldConfiguration.name}_slug`]
       const field = createNodeField(
         'singleton',
         singletonDescriptor.name,
         singletonFieldValue,
-        singletonFieldConfiguration
+        singletonFieldConfiguration,
+        singletonFieldSlug
       )
 
       if (field !== null) {
@@ -468,7 +473,8 @@ const createNodeField = (
   nodeType,
   nodeName,
   nodeFieldValue,
-  nodeFieldConfiguration
+  nodeFieldConfiguration,
+  nodeFieldSlug
 ) => {
   const nodeFieldType = nodeFieldConfiguration.type
 
@@ -550,8 +556,11 @@ const createNodeField = (
       )
     } else {
       itemField.value = nodeFieldValue
-    }
 
+      if (nodeFieldSlug) {
+        itemField.slug = nodeFieldSlug
+      }
+    }
     return itemField
   }
 
