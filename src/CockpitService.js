@@ -7,6 +7,12 @@ const {
   METHODS,
   MARKDOWN_IMAGE_REGEXP,
   MARKDOWN_ASSET_REGEXP,
+  INVALID_BASE_URL,
+  INVALID_TOKEN,
+  INVALID_LOCALES,
+  INVALID_WHITE_LISTED_COLLECTION_NAMES,
+  INVALID_WHITE_LISTED_SINGLETON_NAMES,
+  INVALID_ALIASES,
 } = require('./constants')
 const getFieldsOfTypes = require('./helpers.js').getFieldsOfTypes
 
@@ -19,6 +25,36 @@ module.exports = class CockpitService {
     whiteListedSingletonNames = [],
     aliases = {}
   ) {
+    if (typeof baseUrl !== 'string') {
+      throw new TypeError(INVALID_BASE_URL)
+    }
+
+    if (typeof token !== 'string') {
+      throw new TypeError(INVALID_TOKEN)
+    }
+
+    if (!Array.isArray(locales)) {
+      throw new TypeError(INVALID_LOCALES)
+    }
+
+    if (
+      whiteListedCollectionNames !== null &&
+      !Array.isArray(whiteListedCollectionNames)
+    ) {
+      throw new TypeError(INVALID_WHITE_LISTED_COLLECTION_NAMES)
+    }
+
+    if (
+      whiteListedSingletonNames !== null &&
+      !Array.isArray(whiteListedSingletonNames)
+    ) {
+      throw new TypeError(INVALID_WHITE_LISTED_SINGLETON_NAMES)
+    }
+
+    if (typeof aliases !== 'object') {
+      throw new TypeError(INVALID_ALIASES)
+    }
+
     this.baseUrl = baseUrl
     this.token = token
     this.locales = locales

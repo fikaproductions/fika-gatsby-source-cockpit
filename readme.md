@@ -91,7 +91,8 @@ plugins: [
 Notes:
 
 1. E.g. `'http://localhost:8080'`.
-2. E.g. `['en', 'fr']`.
+2. E.g. `['en', 'fr']`. When this list is not empty, you should specify a `lang` filter when querying data.
+   Otherwise, there will be duplicates in your query results since each item is included once for each specified language.
 3. The specific Cockpit collections you want to fetch. If empty or null all collections will be fetched. E.g. `['Products', 'Menu']`
 4. Same as the `collections` parameter, but for the Cockpit singletons.
 5. You can specify aliases for any Cockpit collection or singleton. Since it's not possible to have two GraphQL types with the same name in a schema, you can use this configuration to alias for instance a collection and a singleton sharing the same name (or with a difference of capitalization in the first character).  
